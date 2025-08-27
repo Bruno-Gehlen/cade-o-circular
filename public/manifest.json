@@ -5,7 +5,6 @@
   "version": "2.1.0",
   "lang": "pt-BR",
   "scope": "/",
-  "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#2180C4",

@@ -738,7 +738,7 @@ select.form-control {
 }
 
 /* END PERPLEXITY DESIGN SYSTEM */
-/* App-specific styles for FASE 2 - Production */
+/* App-specific styles - Versão Corrigida */
 
 .app-container {
   height: 100vh;
@@ -747,7 +747,7 @@ select.form-control {
   overflow: hidden;
 }
 
-/* Header Melhorado */
+/* Header Simplificado */
 .header {
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
@@ -851,7 +851,7 @@ select.form-control {
   position: relative;
 }
 
-/* Sidebar Aprimorada */
+/* Sidebar Simplificada */
 .sidebar {
   width: 350px;
   background: var(--color-surface);
@@ -1175,120 +1175,6 @@ select.form-control {
   margin-top: var(--space-2);
 }
 
-/* Modal de Configurações */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-16);
-  transition: opacity var(--duration-normal) var(--ease-standard);
-}
-
-.modal.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.modal-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
-}
-
-.modal-content {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  max-width: 600px;
-  width: 100%;
-  max-height: 90vh;
-  overflow: hidden;
-  position: relative;
-  z-index: 1;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-20);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-1);
-}
-
-.modal-header h2 {
-  margin: 0;
-  font-size: var(--font-size-2xl);
-  color: var(--color-text);
-}
-
-.btn-close {
-  background: none;
-  border: none;
-  font-size: var(--font-size-2xl);
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  padding: var(--space-4);
-  border-radius: var(--radius-base);
-  transition: all var(--duration-fast);
-}
-
-.btn-close:hover {
-  background: var(--color-secondary);
-  color: var(--color-text);
-}
-
-.modal-body {
-  padding: var(--space-20);
-  overflow-y: auto;
-  max-height: 70vh;
-}
-
-.config-section {
-  margin-bottom: var(--space-24);
-  padding-bottom: var(--space-20);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.config-section:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-}
-
-.config-section h3 {
-  margin: 0 0 var(--space-16) 0;
-  font-size: var(--font-size-lg);
-  color: var(--color-primary);
-}
-
-.form-help {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  margin-top: var(--space-4);
-  display: block;
-}
-
-.form-help a {
-  color: var(--color-primary);
-}
-
-.config-actions {
-  display: flex;
-  gap: var(--space-8);
-  margin-top: var(--space-16);
-  flex-wrap: wrap;
-}
-
 /* Toast Notifications */
 .toast-container {
   position: fixed;
@@ -1362,19 +1248,24 @@ select.form-control {
   }
 }
 
-/* Loading Overlay */
+/* Loading Overlay com Timer Máximo */
 .loading-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
   transition: opacity var(--duration-normal) var(--ease-standard);
+}
+
+.loading-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .loading-content {
@@ -1383,6 +1274,7 @@ select.form-control {
   border-radius: var(--radius-lg);
   text-align: center;
   box-shadow: var(--shadow-lg);
+  min-width: 300px;
 }
 
 .loading-spinner {
@@ -1393,6 +1285,13 @@ select.form-control {
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto var(--space-16) auto;
+}
+
+.loading-progress {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-8);
+  min-height: 20px;
 }
 
 @keyframes spin {
@@ -1595,14 +1494,6 @@ select.form-control {
     right: var(--space-8);
     max-width: none;
   }
-  
-  .modal-content {
-    margin: var(--space-8);
-  }
-  
-  .modal-body {
-    padding: var(--space-16);
-  }
 }
 
 @media (max-width: 480px) {
@@ -1632,6 +1523,11 @@ select.form-control {
   .arrival-time {
     align-items: flex-start;
     text-align: left;
+  }
+
+  .loading-content {
+    margin: var(--space-16);
+    min-width: auto;
   }
 }
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Ônibus USP Butantã - FASE 2</title>
+    <title>Monitor Ônibus USP Butantã</title>
     <meta name="description" content="Monitoramento em tempo real dos ônibus da USP Butantã com notificações push">
     
     <!-- PWA Manifest -->
@@ -19,12 +19,12 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Header com Switch de Notificações -->
+        <!-- Header Simplificado -->
         <header class="header">
             <div class="header-left">
                 <h1>🚌 Monitor Ônibus USP</h1>
                 <div class="connection-status" id="connectionStatus">
-                    <span class="status status--success">🟢 Online</span>
+                    <span class="status status--success">🟢 Sistema ativo</span>
                 </div>
             </div>
             
@@ -38,10 +38,6 @@
                     <span class="switch-label">🔔 Notificações</span>
                 </div>
                 
-                <button id="configBtn" class="btn btn--secondary btn--sm" title="Configurações">
-                    ⚙️ Config
-                </button>
-                
                 <button id="themeToggle" class="btn btn--secondary btn--sm">
                     🌙 Tema
                 </button>
@@ -53,7 +49,7 @@
         </header>
 
         <div class="main-content">
-            <!-- Sidebar Aprimorada -->
+            <!-- Sidebar Simplificada -->
             <aside class="sidebar" id="sidebar">
                 <div class="sidebar-section">
                     <div class="section-header">
@@ -83,8 +79,8 @@
                     <h3>📍 Status Sistema</h3>
                     <div class="status-info">
                         <div class="status-item">
-                            <span>API Status:</span>
-                            <span class="status-value" id="apiStatus">Simulado</span>
+                            <span>Fonte de dados:</span>
+                            <span class="status-value" id="dataSource">Carregando...</span>
                         </div>
                         <div class="status-item">
                             <span>Última atualização:</span>
@@ -102,7 +98,7 @@
                 </div>
             </aside>
 
-            <!-- Mapa com Controles Avançados -->
+            <!-- Mapa com Controles -->
             <main class="map-container">
                 <div id="map" class="map"></div>
                 <div class="map-controls">
@@ -119,7 +115,7 @@
             </main>
         </div>
 
-        <!-- Painel Inferior Melhorado -->
+        <!-- Painel Inferior -->
         <footer class="bottom-panel">
             <div class="panel-header">
                 <h3>🚌 Próximos Ônibus</h3>
@@ -144,100 +140,17 @@
         </footer>
     </div>
 
-    <!-- Modal de Configurações -->
-    <div id="configModal" class="modal hidden">
-        <div class="modal-overlay" id="modalOverlay"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>⚙️ Configurações</h2>
-                <button id="closeModalBtn" class="btn-close">✕</button>
-            </div>
-            
-            <div class="modal-body">
-                <div class="config-section">
-                    <h3>🔑 Integração SPTrans API</h3>
-                    <div class="form-group">
-                        <label class="form-label">Chave da API (Token):</label>
-                        <input type="password" id="apiKeyInput" class="form-control" placeholder="Insira sua chave da API SPTrans">
-                        <small class="form-help">
-                            ℹ️ Obtenha sua chave em: <a href="http://www.sptrans.com.br/desenvolvedores/" target="_blank">Portal Desenvolvedores SPTrans</a>
-                        </small>
-                    </div>
-                    <div class="form-group">
-                        <button id="testApiBtn" class="btn btn--primary">🧪 Testar Conexão</button>
-                        <button id="saveApiBtn" class="btn btn--secondary">💾 Salvar</button>
-                    </div>
-                </div>
-
-                <div class="config-section">
-                    <h3>🔔 Configurações de Notificação</h3>
-                    <div class="form-group">
-                        <label class="form-label">Distância para alertas:</label>
-                        <select id="notificationDistance" class="form-control">
-                            <option value="100">100 metros</option>
-                            <option value="200" selected>200 metros</option>
-                            <option value="500">500 metros</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="switch">
-                            <input type="checkbox" id="arrivalNotifications" checked>
-                            <span class="switch-slider"></span>
-                        </label>
-                        <label>Notificar chegadas de ônibus</label>
-                    </div>
-                    <div class="form-group">
-                        <label class="switch">
-                            <input type="checkbox" id="delayNotifications" checked>
-                            <span class="switch-slider"></span>
-                        </label>
-                        <label>Notificar atrasos</label>
-                    </div>
-                </div>
-
-                <div class="config-section">
-                    <h3>🔄 Atualização Automática</h3>
-                    <div class="form-group">
-                        <label class="form-label">Intervalo de atualização:</label>
-                        <select id="updateInterval" class="form-control">
-                            <option value="15000">15 segundos</option>
-                            <option value="30000" selected>30 segundos</option>
-                            <option value="60000">1 minuto</option>
-                            <option value="120000">2 minutos</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="config-section">
-                    <h3>ℹ️ Sobre o Sistema</h3>
-                    <p><strong>Versão:</strong> 2.0.0 (FASE 2 - Produção)</p>
-                    <p><strong>Funcionalidades:</strong></p>
-                    <ul>
-                        <li>✅ Integração API SPTrans</li>
-                        <li>✅ Notificações Push</li>
-                        <li>✅ Geolocalização</li>
-                        <li>✅ PWA (Instalável)</li>
-                        <li>✅ Cache Offline</li>
-                    </ul>
-                    <div class="config-actions">
-                        <button id="installPwaBtn" class="btn btn--primary">📱 Instalar App</button>
-                        <button id="clearCacheBtn" class="btn btn--outline">🗑️ Limpar Cache</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Toast para Notificações -->
     <div id="toastContainer" class="toast-container">
         <!-- Toasts serão inseridos aqui -->
     </div>
 
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay hidden">
+    <!-- Loading Overlay com Timer Máximo -->
+    <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-content">
             <div class="loading-spinner"></div>
-            <p id="loadingMessage">Carregando dados dos ônibus...</p>
+            <p id="loadingMessage">Carregando mapa...</p>
+            <div class="loading-progress" id="loadingProgress">Inicializando sistema...</div>
         </div>
     </div>
 
