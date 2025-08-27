@@ -524,29 +524,24 @@ class BusMonitorPro {
     // ===== CONEXÃO API EM BACKGROUND =====
     async attemptApiConnectionBackground() {
         console.log('🔄 Tentando conectar API SPTrans em background...');
-        
         try {
-            const connectionAttempt = this.simulateApiConnection();
-            const result = await Promise.race([
-                connectionAttempt,
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('timeout')), 10000)
-                )
-            ]);
-            
-            if (result.success) {
+            const response = await fetch('/api/sptrans-proxy?path=/Login/Autenticar');
+            const result = await response.json();
+            if (result.success && result.authenticated) {
                 console.log('✅ API conectada com sucesso');
                 this.isApiConnected = true;
                 this.usingRealData = true;
                 this.updateConnectionStatus();
                 this.showToast('API conectada!', 'success', '📡 Dados em tempo real ativados');
+            } else {
+                throw new Error('API não autenticada');
             }
-            
         } catch (error) {
-            console.log('⚠️ API não disponível, usando dados simulados:', error.message);
+            console.error('❌ Erro ao conectar à API SPTrans:', error.message);
             this.isApiConnected = false;
             this.usingRealData = false;
             this.updateConnectionStatus();
+            this.showToast('Erro de conexão com a API SPTrans', 'error', '❌ Não foi possível conectar à API. Tente novamente mais tarde.');
         }
     }
     
@@ -1357,8 +1352,8 @@ class BusMonitorPro {
                 if (statusElement) statusElement.innerHTML = '<span class="status status--success">📡 Tempo real</span>';
                 if (dataSourceElement) dataSourceElement.textContent = 'API SPTrans';
             } else {
-                if (statusElement) statusElement.innerHTML = '<span class="status status--success">🟢 Animação ativa</span>';
-                if (dataSourceElement) dataSourceElement.textContent = 'Simulação com movimento';
+                if (statusElement) statusElement.innerHTML = '<span class="status status--error">❌ API indisponível</span>';
+                if (dataSourceElement) dataSourceElement.textContent = 'Erro de conexão';
             }
         } catch (error) {
             console.error('❌ Erro ao atualizar status:', error);

@@ -1048,13 +1048,15 @@ select.form-control {
 
 /* Bottom Panel */
 .bottom-panel {
-  height: 220px;
   background: var(--color-surface);
   border-top: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 100px;
+  max-height: 60vh;
+  height: auto;
 }
 
 .panel-header {
