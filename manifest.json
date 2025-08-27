@@ -1,0 +1,124 @@
+{
+  "name": "Monitor Ônibus USP Butantã",
+  "short_name": "Ônibus USP",
+  "description": "Acompanhe os ônibus da USP Butantã em tempo real com notificações push e geolocalização",
+  "version": "2.1.0",
+  "lang": "pt-BR",
+  "scope": "/",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#2180C4",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nNDgnIGhlaWdodD0nNDgnIHZpZXdCb3g9JzAgMCA0OCA0OCcgZmlsbD0nbm9uZScgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJz48cmVjdCB3aWR0aD0nNDgnIGhlaWdodD0nNDgnIHJ4PScxMicgZmlsbD0nIzIxODBDNCcvPjx0ZXh0IHg9JzI0JyB5PSczMicgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1mYW1pbHk9J0FyaWFsJyBmb250LXNpemU9JzI0cHgnIGZpbGw9J3doaXRlJz7wn5qMPC90ZXh0Pjwvc3ZnPg==",
+      "sizes": "48x48",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nNzInIGhlaWdodD0nNzInIHZpZXdCb3g9JzAgMCA3MiA3MicgZmlsbD0nbm9uZScgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJz48cmVjdCB3aWR0aD0nNzInIGhlaWdodD0nNzInIHJ4PScxNicgZmlsbD0nIzIxODBDNCcvPjx0ZXh0IHg9JzM2JyB5PSc0OCcgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1mYW1pbHk9J0FyaWFsJyBmb250LXNpemU9JzM2cHgnIGZpbGw9J3doaXRlJz7wn5qMPC90ZXh0Pjwvc3ZnPg==",
+      "sizes": "72x72",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nOTYnIGhlaWdodD0nOTYnIHZpZXdCb3g9JzAgMCA5NiA5NicgZmlsbD0nbm9uZScgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJz48cmVjdCB3aWR0aD0nOTYnIGhlaWdodD0nOTYnIHJ4PScyMCcgZmlsbD0nIzIxODBDNCcvPjx0ZXh0IHg9JzQ4JyB5PSc2NCcgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1mYW1pbHk9J0FyaWFsJyBmb250LXNpemU9JzQ4cHgnIGZpbGw9J3doaXRlJz7wn5qMPC90ZXh0Pjwvc3ZnPg==",
+      "sizes": "96x96",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMTQ0JyBoZWlnaHQ9JzE0NCcgdmlld0JveD0nMCAwIDE0NCAxNDQnIGZpbGw9J25vbmUnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zyc+PHJlY3Qgd2lkdGg9JzE0NCcgaGVpZ2h0PScxNDQnIHJ4PScyOCcgZmlsbD0nIzIxODBDNCcvPjx0ZXh0IHg9JzcyJyB5PSc5NicgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1mYW1pbHk9J0FyaWFsJyBmb250LXNpemU9JzcycHgnIGZpbGw9J3doaXRlJz7wn5qMPC90ZXh0Pjwvc3ZnPg==",
+      "sizes": "144x144",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMTkyJyBoZWlnaHQ9JzE5Micgdmlld0JveD0nMCAwIDE5MiAxOTInIGZpbGw9J25vbmUnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zyc+PHJlY3Qgd2lkdGg9JzE5MicgaGVpZ2h0PScxOTInIHJ4PSczNicgZmlsbD0nIzIxODBDNCcvPjx0ZXh0IHg9Jzk2JyB5PScxMjgnIHRleHQtYW5jaG9yPSdtaWRkbGUnIGZvbnQtZmFtaWx5PSdBcmlhbCcgZm9udC1zaXplPSc5NnB4JyBmaWxsPSd3aGl0ZSc+8J+ajDwvdGV4dD48L3N2Zz4=",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nNTEyJyBoZWlnaHQ9JzUxMicgdmlld0JveD0nMCAwIDUxMiA1MTInIGZpbGw9J25vbmUnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zyc+PHJlY3Qgd2lkdGg9JzUxMicgaGVpZ2h0PSc1MTInIHJ4PSc5NicgZmlsbD0nIzIxODBDNCcvPjx0ZXh0IHg9JzI1NicgeT0nMzQwJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmb250LWZhbWlseT0nQXJpYWwnIGZvbnQtc2l6ZT0nMjU2cHgnIGZpbGw9J3doaXRlJz7wn5qMPC90ZXh0Pjwvc3ZnPg==",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "travel", "utilities"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMzcwJyBoZWlnaHQ9JzY0MCcgdmlld0JveD0nMCAwIDM3MCA2NDAnIGZpbGw9J25vbmUnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zyc+PHJlY3Qgd2lkdGg9JzM3MCcgaGVpZ2h0PSc2NDAnIGZpbGw9JyNmNWY1ZjUnLz48cmVjdCB4PScwJyB5PScwJyB3aWR0aD0nMzcwJyBoZWlnaHQ9JzgwJyBmaWxsPScjMjE4MEMwJy8+PHRleHQgeD0nMTg1JyB5PSc1MCcgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1mYW1pbHk9J0FyaWFsJyBmb250LXNpemU9JzE4cHgnIGZpbGw9J3doaXRlJz5Nb25pdG9yIMOEbmlidXMgVVNQPC90ZXh0PjxyZWN0IHg9JzEwJyB5PSc5MCcgd2lkdGg9JzEwMCcgaGVpZ2h0PSc1NDAnIGZpbGw9J3doaXRlJy8+PHJlY3QgeD0nMTIwJyB5PSc5MCcgd2lkdGg9JzI0MCcgaGVpZ2h0PSc1NDAnIGZpbGw9JyNlMGUwZTAnLz48dGV4dCB4PSczMCcgeT0nMTMwJyBmb250LWZhbWlseT0nQXJpYWwnIGZvbnQtc2l6ZT0nMTJweCcgZmlsbD0nYmxhY2snPkxpbmhhczwvdGV4dD48dGV4dCB4PScyNDAnIHk9JzMzMCcgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1mYW1pbHk9J0FyaWFsJyBmb250LXNpemU9JzE0cHgnIGZpbGw9JyM2NjYnPk1hcGE8L3RleHQ+PC9zdmc+",
+      "sizes": "370x640",
+      "type": "image/svg+xml",
+      "form_factor": "narrow",
+      "label": "Tela principal do aplicativo"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Linhas Favoritas",
+      "short_name": "Favoritas",
+      "description": "Acesso rápido às suas linhas favoritas",
+      "url": "/?view=favorites",
+      "icons": [
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nOTYnIGhlaWdodD0nOTYnIHZpZXdCb3g9JzAgMCA5NiA5NicgZmlsbD0nbm9uZScgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJz48cmVjdCB3aWR0aD0nOTYnIGhlaWdodD0nOTYnIHJ4PScyMCcgZmlsbD0nI0ZGRDcwMCcvPjx0ZXh0IHg9JzQ4JyB5PSc2NCcgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1mYW1pbHk9J0FyaWFsJyBmb250LXNpemU9JzQ4cHgnIGZpbGw9J3doaXRlJz7ilow8L3RleHQ+PC9zdmc+",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Minha Localização",
+      "short_name": "Localização",
+      "description": "Ver ônibus próximos à sua localização",
+      "url": "/?action=locate",
+      "icons": [
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nOTYnIGhlaWdodD0nOTYnIHZpZXdCb3g9JzAgMCA5NiA5NicgZmlsbD0nbm9uZScgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJz48cmVjdCB3aWR0aD0nOTYnIGhlaWdodD0nOTYnIHJ4PScyMCcgZmlsbD0nIzRDQUY1MCcvPjx0ZXh0IHg9JzQ4JyB5PSc2NCcgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1mYW1pbHk9J0FyaWFsJyBmb250LXNpemU9JzQ4cHgnIGZpbGw9J3doaXRlJz7wn5ONJC90ZXh0Pjwvc3ZnPg==",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Configurações",
+      "short_name": "Config",
+      "description": "Configurar notificações e API",
+      "url": "/?modal=settings",
+      "icons": [
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nOTYnIGhlaWdodD0nOTYnIHZpZXdCb3g9JzAgMCA5NiA5NicgZmlsbD0nbm9uZScgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJz48cmVjdCB3aWR0aD0nOTYnIGhlaWdodD0nOTYnIHJ4PScyMCcgZmlsbD0nIzc1N0M4QScvPjx0ZXh0IHg9JzQ4JyB5PSc2NCcgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1mYW1pbHk9J0FyaWFsJyBmb250LXNpemU9JzQ4cHgnIGZpbGw9J3doaXRlJz7imJnvuI88L3RleHQ+PC9zdmc+",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+sptrans",
+      "url": "/?linha=%s"
+    }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  }
+}

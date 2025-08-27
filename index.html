@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Ônibus USP Butantã - FASE 2</title>
+    <meta name="description" content="Monitoramento em tempo real dos ônibus da USP Butantã com notificações push">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTW9uaXRvciBPbmlidXMgVVNQIEJ1dGFudMOjIiwic2hvcnRfbmFtZSI6Ik9uaWJ1cyBVU1AiLCJkZXNjcmlwdGlvbiI6Ik1vbml0b3JhbWVudG8gZW0gdGVtcG8gcmVhbCBkb3Mgw7RuaWJ1cyBkYSBVU1AgQnV0YW50w6MiLCJzdGFydF91cmwiOiIvIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbCwlM0Nzdmcgd2lkdGg9JzE5MicgaGVpZ2h0PScxOTInIHZpZXdCb3g9JzAgMCA5NiA5NicgZmlsbD0nbm9uZScgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyUzRSUzQ3JlY3Qgd2lkdGg9Jzk2JyBoZWlnaHQ9Jzk2JyByeD0nMjAnIGZpbGw9JyUyMzIxODBDNCcvJTNFJTNDdGV4dCB4PSc0OCcgeT0nNjAnIHRleHQtYW5jaG9yPSdtaWRkbGUnIGZvbnQtZmFtaWx5PSdBcmlhbCcgZm9udC1zaXplPSc0MHB4JyBmaWxsPSd3aGl0ZSclM0UlRjAlOUYlOUElOEMlM0MvdGV4dCUzRSUzQy9zdmclM0UiLCJ0eXBlIjoiaW1hZ2Uvc3ZnK3htbCIsInNpemVzIjoiMTkyeDE5MiJ9LHsic3JjIjoiZGF0YTppbWFnZS9zdmcreG1sLCUzQ3N2Zyc3aWR0aD0nNTEyJyBoZWlnaHQ9JzUxMicgdmlld0JveD0nMCAwIDk2IDk2JyBmaWxsPSdub25lJyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnJTNFJTNDcmVjdCB3aWR0aD0nOTYnIGhlaWdodD0nOTYnIHJ4PScyMCcgZmlsbD0nJTIzMjE4MEMwJy8lM0UlM0N0ZXh0IHg9JzQ4JyB5PSc2MCcgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1mYW1pbHk9J0FyaWFsJyBmb250LXNpemU9JzQwcHgnIGZpbGw9J3doaXRlJyUzRSVGMCU5RiU5QSU4QyUzQy90ZXh0JTNFJTNDL3N2ZyUzRSIsInR5cGUiOiJpbWFnZS9zdmcreG1sIiwic2l6ZXMiOiI1MTJ4NTEyIn1dLCJkaXNwbGF5IjoiZnVsbHNjcmVlbiIsInRoZW1lX2NvbG9yIjoiIzIxODBDNCIsImJhY2tncm91bmRfY29sb3IiOiIjZmZmZmZmIiwibGFuZyI6InB0LUJSIn0=">
+    <meta name="theme-color" content="#2180C4">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Ônibus USP">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header com Switch de Notificações -->
+        <header class="header">
+            <div class="header-left">
+                <h1>🚌 Monitor Ônibus USP</h1>
+                <div class="connection-status" id="connectionStatus">
+                    <span class="status status--success">🟢 Online</span>
+                </div>
+            </div>
+            
+            <div class="header-controls">
+                <!-- Switch de Notificações Sempre Visível -->
+                <div class="notification-toggle">
+                    <label class="switch">
+                        <input type="checkbox" id="notificationSwitch">
+                        <span class="switch-slider"></span>
+                    </label>
+                    <span class="switch-label">🔔 Notificações</span>
+                </div>
+                
+                <button id="configBtn" class="btn btn--secondary btn--sm" title="Configurações">
+                    ⚙️ Config
+                </button>
+                
+                <button id="themeToggle" class="btn btn--secondary btn--sm">
+                    🌙 Tema
+                </button>
+                
+                <button id="refreshBtn" class="btn btn--primary btn--sm">
+                    🔄 Atualizar
+                </button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Sidebar Aprimorada -->
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-section">
+                    <div class="section-header">
+                        <h3>🚍 Linhas Favoritas</h3>
+                        <button id="clearFavoritesBtn" class="btn btn--outline btn--sm">Limpar</button>
+                    </div>
+                    <div class="favorites-container" id="favoritesContainer">
+                        <div class="no-favorites">
+                            <p>Marque suas linhas favoritas</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="section-header">
+                        <h3>🚌 Todas as Linhas</h3>
+                        <div class="lines-filter">
+                            <input type="text" id="lineSearch" class="form-control" placeholder="Buscar linha...">
+                        </div>
+                    </div>
+                    <div class="lines-container" id="linesContainer">
+                        <!-- Lines populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>📍 Status Sistema</h3>
+                    <div class="status-info">
+                        <div class="status-item">
+                            <span>API Status:</span>
+                            <span class="status-value" id="apiStatus">Simulado</span>
+                        </div>
+                        <div class="status-item">
+                            <span>Última atualização:</span>
+                            <span class="status-value" id="lastUpdate">--:--</span>
+                        </div>
+                        <div class="status-item">
+                            <span>Ônibus monitorados:</span>
+                            <span class="status-value" id="activeBuses">0</span>
+                        </div>
+                        <div class="status-item">
+                            <span>Localização:</span>
+                            <span class="status-value" id="locationStatus">Desativada</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Mapa com Controles Avançados -->
+            <main class="map-container">
+                <div id="map" class="map"></div>
+                <div class="map-controls">
+                    <button id="myLocationBtn" class="btn btn--primary btn--sm" title="Minha Localização">
+                        📍 Localização
+                    </button>
+                    <button id="centerMapBtn" class="btn btn--secondary btn--sm" title="Centralizar USP">
+                        🎯 USP
+                    </button>
+                    <button id="toggleSidebarBtn" class="btn btn--secondary btn--sm" title="Menu">
+                        ☰
+                    </button>
+                </div>
+            </main>
+        </div>
+
+        <!-- Painel Inferior Melhorado -->
+        <footer class="bottom-panel">
+            <div class="panel-header">
+                <h3>🚌 Próximos Ônibus</h3>
+                <div class="panel-controls">
+                    <select id="stopSelector" class="form-control">
+                        <option value="">Selecione um ponto</option>
+                        <option value="terminal">Terminal Butantã</option>
+                        <option value="portaria3">Portaria 3 USP</option>
+                        <option value="reitoria">Reitoria USP</option>
+                        <option value="praca">Praça do Relógio</option>
+                        <option value="hospital">Hospital Universitário</option>
+                        <option value="cptm">CPTM Cidade Universitária</option>
+                    </select>
+                    <button id="nearbyStopsBtn" class="btn btn--secondary btn--sm">📍 Próximos a mim</button>
+                </div>
+            </div>
+            <div class="arrivals-container" id="arrivalsContainer">
+                <div class="no-data">
+                    <p>Selecione um ponto e linhas para ver os próximos ônibus</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal de Configurações -->
+    <div id="configModal" class="modal hidden">
+        <div class="modal-overlay" id="modalOverlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Configurações</h2>
+                <button id="closeModalBtn" class="btn-close">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="config-section">
+                    <h3>🔑 Integração SPTrans API</h3>
+                    <div class="form-group">
+                        <label class="form-label">Chave da API (Token):</label>
+                        <input type="password" id="apiKeyInput" class="form-control" placeholder="Insira sua chave da API SPTrans">
+                        <small class="form-help">
+                            ℹ️ Obtenha sua chave em: <a href="http://www.sptrans.com.br/desenvolvedores/" target="_blank">Portal Desenvolvedores SPTrans</a>
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <button id="testApiBtn" class="btn btn--primary">🧪 Testar Conexão</button>
+                        <button id="saveApiBtn" class="btn btn--secondary">💾 Salvar</button>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>🔔 Configurações de Notificação</h3>
+                    <div class="form-group">
+                        <label class="form-label">Distância para alertas:</label>
+                        <select id="notificationDistance" class="form-control">
+                            <option value="100">100 metros</option>
+                            <option value="200" selected>200 metros</option>
+                            <option value="500">500 metros</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="switch">
+                            <input type="checkbox" id="arrivalNotifications" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                        <label>Notificar chegadas de ônibus</label>
+                    </div>
+                    <div class="form-group">
+                        <label class="switch">
+                            <input type="checkbox" id="delayNotifications" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                        <label>Notificar atrasos</label>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>🔄 Atualização Automática</h3>
+                    <div class="form-group">
+                        <label class="form-label">Intervalo de atualização:</label>
+                        <select id="updateInterval" class="form-control">
+                            <option value="15000">15 segundos</option>
+                            <option value="30000" selected>30 segundos</option>
+                            <option value="60000">1 minuto</option>
+                            <option value="120000">2 minutos</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>ℹ️ Sobre o Sistema</h3>
+                    <p><strong>Versão:</strong> 2.0.0 (FASE 2 - Produção)</p>
+                    <p><strong>Funcionalidades:</strong></p>
+                    <ul>
+                        <li>✅ Integração API SPTrans</li>
+                        <li>✅ Notificações Push</li>
+                        <li>✅ Geolocalização</li>
+                        <li>✅ PWA (Instalável)</li>
+                        <li>✅ Cache Offline</li>
+                    </ul>
+                    <div class="config-actions">
+                        <button id="installPwaBtn" class="btn btn--primary">📱 Instalar App</button>
+                        <button id="clearCacheBtn" class="btn btn--outline">🗑️ Limpar Cache</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast para Notificações -->
+    <div id="toastContainer" class="toast-container">
+        <!-- Toasts serão inseridos aqui -->
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p id="loadingMessage">Carregando dados dos ônibus...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

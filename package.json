@@ -1,0 +1,78 @@
+{
+  "name": "sptrans-monitor-v2",
+  "version": "2.1.0",
+  "description": "Monitor de ônibus da USP Butantã em tempo real com integração API SPTrans",
+  "main": "index.html",
+  "scripts": {
+    "start": "vercel dev",
+    "build": "echo 'No build step required for static site'",
+    "deploy": "vercel --prod",
+    "preview": "vercel",
+    "lint": "echo 'Lint not configured'",
+    "test": "echo 'Tests not configured'"
+  },
+  "keywords": [
+    "sptrans",
+    "onibus",
+    "usp",
+    "butanta",
+    "transporte-publico",
+    "pwa",
+    "push-notifications",
+    "real-time",
+    "geolocation"
+  ],
+  "author": {
+    "name": "Monitor USP",
+    "email": "contato@monitorusp.com.br",
+    "url": "https://monitorusp.vercel.app"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/usuario/sptrans-monitor-v2.git"
+  },
+  "bugs": {
+    "url": "https://github.com/usuario/sptrans-monitor-v2/issues"
+  },
+  "homepage": "https://monitorusp.vercel.app",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "vercel": "^32.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not ie 11"
+  ],
+  "pwa": {
+    "name": "Monitor Ônibus USP Butantã",
+    "short_name": "Ônibus USP",
+    "description": "Acompanhe os ônibus da USP Butantã em tempo real",
+    "theme_color": "#2180C4",
+    "background_color": "#ffffff",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "start_url": "/"
+  },
+  "vercel": {
+    "functions": {
+      "api/sptrans-proxy.js": {
+        "maxDuration": 30,
+        "memory": 1024
+      }
+    },
+    "regions": ["gru1"]
+  },
+  "funding": {
+    "type": "individual",
+    "url": "https://github.com/sponsors/usuario"
+  }
+}
