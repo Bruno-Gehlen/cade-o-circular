@@ -619,15 +619,14 @@ class BusMonitorPro {
                 }
             ],
             "pontos_referencia": [
-                {"nome": "Terminal Butantã", "lat": -23.5471, "lng": -46.7085, "tipo": "terminal", "id": "terminal"},
-                {"nome": "Portaria 3 USP", "lat": -23.5558, "lng": -46.7316, "tipo": "portaria", "id": "portaria3"},
-                {"nome": "Reitoria USP", "lat": -23.5619, "lng": -46.7156, "tipo": "predio", "id": "reitoria"},
-                {"nome": "Praça do Relógio", "lat": -23.5614, "lng": -46.7194, "tipo": "praca", "id": "praca"},
+                {"nome": "Terminal Butantã", "lat": -23.571855, "lng": -46.708919, "tipo": "terminal", "id": "terminal"},
+                {"nome": "Portaria 3 USP", "lat": -23.568042, "lng": -46.740227, "tipo": "portaria", "id": "portaria3"},
+                {"nome": "Praça do Relógio", "lat": -23.559830, "lng": -46.724313, "tipo": "praca", "id": "praca"},
                 {"nome": "Hospital Universitário", "lat": -23.5567, "lng": -46.7063, "tipo": "hospital", "id": "hospital"},
-                {"nome": "CPTM Cidade Universitária", "lat": -23.5489, "lng": -46.7205, "tipo": "estacao", "id": "cptm"}
-            ]
+                {"nome": "CPTM Cidade Universitária", "lat": -23.560542, "lng": -46.713261, "tipo": "estacao", "id": "cptm"}
+            ],
         };
-        
+
         console.log('📊 Dados carregados:', this.linesData.linhas.length, 'linhas');
     }
     
@@ -1028,61 +1027,51 @@ class BusMonitorPro {
     }
     
     // ===== MARCADORES DE ÔNIBUS =====
-    updateBusMarkers() {
+    async updateBusMarkers() {
         if (!this.map) return;
-        
+
         try {
-            // Remove marcadores de linhas não selecionadas
-            this.busMarkers.forEach((marker, busId) => {
-                const lineCode = busId.split('-')[0];
-                if (!this.selectedLines.has(lineCode)) {
-                    this.map.removeLayer(marker);
-                    this.busMarkers.delete(busId);
-                }
+            // Buscar dados reais da API SPTrans
+            const response = await fetch('/api/sptrans-proxy?path=/Posicao');
+            const result = await response.json();
+
+            if (!result.success || !result.data) {
+                throw new Error('Falha ao obter dados dos ônibus da API SPTrans');
+            }
+
+            // Limpar marcadores antigos
+            this.busMarkers.forEach((marker) => {
+                this.map.removeLayer(marker);
             });
-            
-            // Adiciona marcadores para linhas selecionadas
-            this.linesData.linhas.forEach(linha => {
-                if (this.selectedLines.has(linha.codigo)) {
-                    linha.onibus_simulados.forEach(onibus => {
-                        const busId = `${linha.codigo}-${onibus.prefixo}`;
-                        
-                        if (!this.busMarkers.has(busId)) {
-                            // Usa posição dos dados de animação se disponível
-                            const busData = this.busAnimationData.get(busId);
-                            const position = busData ? 
-                                [busData.currentPosition.lat, busData.currentPosition.lng] : 
-                                [onibus.lat, onibus.lng];
-                            
-                            const marker = L.marker(position, {
-                                icon: this.createAnimatedBusIcon(linha.cor, onibus.velocidade > 8, onibus.bearing || 0)
-                            });
-                            
-                            const popupContent = `
-                                <div class="popup-content">
-                                    <h4 class="popup-title">🚌 Linha ${linha.codigo}</h4>
-                                    <p class="popup-detail">Prefixo: ${onibus.prefixo}</p>
-                                    <p class="popup-detail">Velocidade: ${onibus.velocidade.toFixed(0)} km/h</p>
-                                    <p class="popup-detail">Sentido: ${onibus.sentido}</p>
-                                    <div class="popup-actions">
-                                        <button class="btn btn--primary btn--sm" onclick="window.busMonitor.trackBus('${linha.codigo}', '${onibus.prefixo}')">
-                                            📍 Rastrear
-                                        </button>
-                                    </div>
-                                </div>
-                            `;
-                            
-                            marker.bindPopup(popupContent);
-                            marker.addTo(this.map);
-                            this.busMarkers.set(busId, marker);
-                        }
-                    });
-                }
+            this.busMarkers.clear();
+
+            // Exibir ônibus reais
+            result.data.forEach(onibus => {
+                const busId = `${onibus.linha}-${onibus.prefixo}`;
+                const position = [onibus.lat, onibus.lng];
+
+                const marker = L.marker(position, {
+                    icon: this.createAnimatedBusIcon(onibus.cor, onibus.velocidade > 8, onibus.bearing || 0)
+                });
+
+                const popupContent = `
+                    <div class="popup-content">
+                        <h4 class="popup-title">🚌 Linha ${onibus.linha}</h4>
+                        <p class="popup-detail">Prefixo: ${onibus.prefixo}</p>
+                        <p class="popup-detail">Velocidade: ${onibus.velocidade.toFixed(0)} km/h</p>
+                        <p class="popup-detail">Sentido: ${onibus.sentido}</p>
+                    </div>
+                `;
+
+                marker.bindPopup(popupContent);
+                marker.addTo(this.map);
+                this.busMarkers.set(busId, marker);
             });
-            
+
             console.log('🚌 Marcadores de ônibus atualizados:', this.busMarkers.size);
         } catch (error) {
             console.error('❌ Erro ao atualizar marcadores de ônibus:', error);
+            this.showToast('Erro ao carregar ônibus', 'error', 'Não foi possível obter dados da API SPTrans.');
         }
     }
     
