@@ -755,7 +755,7 @@ select.form-control {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 70px;
+  height: 50px;
   box-shadow: var(--shadow-sm);
   position: relative;
   z-index: 1000;
