@@ -738,7 +738,7 @@ select.form-control {
 }
 
 /* END PERPLEXITY DESIGN SYSTEM */
-/* App-specific styles - Versão Corrigida */
+/* App-specific styles - Versão Corrigida com Animações Suaves */
 
 .app-container {
   height: 100vh;
@@ -1299,51 +1299,121 @@ select.form-control {
   100% { transform: rotate(360deg); }
 }
 
-/* Custom Leaflet Styles */
+/* NOVO: Estilos de marcadores customizados com animações suaves */
+
 .custom-bus-marker {
   background: white;
   border: 3px solid;
   border-radius: 50%;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
   box-shadow: var(--shadow-md);
   cursor: pointer;
-  transition: all var(--duration-fast);
+  transition: all var(--duration-normal) var(--ease-standard);
+  position: relative;
+  overflow: visible;
 }
 
 .custom-bus-marker:hover {
-  transform: scale(1.1);
+  transform: scale(1.15);
+  box-shadow: var(--shadow-lg);
 }
 
+/* NOVO: Animação suave para ônibus em movimento */
+.bus-moving {
+  animation: busMovingPulse 2s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(33, 128, 141, 0.4);
+}
+
+.bus-stopped {
+  opacity: 0.8;
+  animation: none;
+}
+
+@keyframes busMovingPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: var(--shadow-md);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 25px rgba(33, 128, 141, 0.6);
+  }
+}
+
+/* NOVO: Marcador de parada melhorado */
 .custom-stop-marker {
   background: var(--color-surface);
   border: 3px solid var(--color-primary);
   border-radius: 50%;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-standard);
 }
 
+.custom-stop-marker:hover {
+  transform: scale(1.2);
+  box-shadow: var(--shadow-md);
+  border-width: 4px;
+}
+
+/* NOVO: Marcador de usuário estável */
 .user-location-marker {
   background: var(--color-primary);
   border: 3px solid white;
   border-radius: 50%;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   box-shadow: var(--shadow-md);
-  animation: pulse 2s infinite;
+  animation: userLocationPulse 3s ease-in-out infinite;
+  transition: all var(--duration-normal) var(--ease-standard);
 }
 
+.user-location-marker-stable {
+  background: var(--color-primary);
+  border: 4px solid white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  box-shadow: 0 0 15px rgba(33, 128, 141, 0.5);
+  animation: userLocationStable 4s ease-in-out infinite;
+}
+
+@keyframes userLocationPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.7;
+  }
+}
+
+@keyframes userLocationStable {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 15px rgba(33, 128, 141, 0.5);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(33, 128, 141, 0.7);
+  }
+}
+
+/* NOVO: Estilos de popup melhorados */
 .leaflet-popup-content-wrapper {
   background: var(--color-surface);
   border-radius: var(--radius-base);
   box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-card-border);
 }
 
 .leaflet-popup-content {
@@ -1377,25 +1447,65 @@ select.form-control {
   margin-top: var(--space-8);
 }
 
-/* Animations */
-.bus-moving {
-  animation: busMoving 3s ease-in-out infinite;
+/* NOVO: Animações de transição suave para marcadores */
+.leaflet-marker-icon {
+  transition: all var(--duration-normal) var(--ease-standard) !important;
 }
 
-.bus-stopped {
-  opacity: 0.7;
-  animation: none;
+/* NOVO: Efeito de rastro para ônibus em movimento */
+.bus-trail {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  opacity: 0.3;
+  animation: trailFade 2s ease-out forwards;
+  pointer-events: none;
 }
 
-@keyframes busMoving {
+@keyframes trailFade {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+/* NOVO: Indicador de direção para ônibus */
+.bus-direction-arrow {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: white;
+  font-weight: bold;
+  box-shadow: var(--shadow-sm);
+  animation: directionPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes directionPulse {
   0%, 100% {
+    opacity: 1;
     transform: scale(1);
   }
   50% {
-    transform: scale(1.05);
+    opacity: 0.7;
+    transform: scale(0.9);
   }
 }
 
+/* Animações */
 .refreshing {
   animation: rotate 1s linear infinite;
 }
@@ -1405,18 +1515,35 @@ select.form-control {
   to { transform: rotate(360deg); }
 }
 
-@keyframes pulse {
+/* NOVO: Animação de entrada suave para marcadores */
+.marker-appear {
+  animation: markerAppear 0.5s ease-out forwards;
+}
+
+@keyframes markerAppear {
   0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.7;
+    opacity: 0;
+    transform: scale(0.5);
   }
   100% {
-    transform: scale(1);
     opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* NOVO: Animação de saída suave para marcadores */
+.marker-disappear {
+  animation: markerDisappear 0.3s ease-in forwards;
+}
+
+@keyframes markerDisappear {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
   }
 }
 
@@ -1435,6 +1562,18 @@ select.form-control {
   .panel-controls {
     width: 100%;
     justify-content: space-between;
+  }
+  
+  /* NOVO: Marcadores menores em telas menores */
+  .custom-bus-marker {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+  
+  .custom-stop-marker {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -1494,6 +1633,18 @@ select.form-control {
     right: var(--space-8);
     max-width: none;
   }
+  
+  /* NOVO: Marcadores ainda menores em mobile */
+  .custom-bus-marker {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+  
+  .user-location-marker-stable {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1529,6 +1680,12 @@ select.form-control {
     margin: var(--space-16);
     min-width: auto;
   }
+  
+  /* NOVO: Controles de mapa maiores para touch */
+  .map-controls .btn--sm {
+    padding: var(--space-10) var(--space-12);
+    font-size: var(--font-size-sm);
+  }
 }
 
 /* PWA específico */
@@ -1548,6 +1705,19 @@ select.form-control {
   .custom-stop-marker {
     background: var(--color-charcoal-800);
   }
+  
+  /* NOVO: Ajustes para tema escuro */
+  .bus-moving {
+    box-shadow: 0 0 20px rgba(50, 184, 198, 0.4);
+  }
+  
+  .user-location-marker-stable {
+    box-shadow: 0 0 15px rgba(50, 184, 198, 0.5);
+  }
+  
+  .bus-trail {
+    background: var(--color-teal-300);
+  }
 }
 
 [data-color-scheme="dark"] .custom-bus-marker {
@@ -1557,4 +1727,49 @@ select.form-control {
 
 [data-color-scheme="dark"] .custom-stop-marker {
   background: var(--color-charcoal-800);
+}
+
+[data-color-scheme="dark"] .bus-moving {
+  box-shadow: 0 0 20px rgba(50, 184, 198, 0.4);
+}
+
+[data-color-scheme="dark"] .user-location-marker-stable {
+  box-shadow: 0 0 15px rgba(50, 184, 198, 0.5);
+}
+
+[data-color-scheme="dark"] .bus-trail {
+  background: var(--color-teal-300);
+}
+
+/* NOVO: Animações específicas para performance otimizada */
+@media (prefers-reduced-motion: reduce) {
+  .custom-bus-marker,
+  .user-location-marker,
+  .user-location-marker-stable,
+  .bus-moving,
+  .leaflet-marker-icon {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .bus-trail,
+  .bus-direction-arrow {
+    display: none;
+  }
+}
+
+/* NOVO: Estilos para dispositivos com hover limitado (touch) */
+@media (hover: none) and (pointer: coarse) {
+  .custom-bus-marker:hover,
+  .custom-stop-marker:hover {
+    transform: none;
+  }
+  
+  .line-item:hover {
+    transform: none;
+  }
+  
+  .arrival-item:hover {
+    transform: none;
+  }
 }
