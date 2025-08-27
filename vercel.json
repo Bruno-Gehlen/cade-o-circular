@@ -2,8 +2,7 @@
   "functions": {
     "api/sptrans-proxy.js": {
       "maxDuration": 30,
-      "memory": 1024,
-      "regions": ["gru1", "iad1"]
+      "memory": 1024
     }
   },
   "headers": [
