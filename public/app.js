@@ -13,8 +13,13 @@ class BusMonitorPro {
         this.userLocation = null;
         
         // Theme and UI
-        this.isDarkTheme = this.getStoredTheme();
+        this.isDarkTheme = this.getStoredTheme() ?? true;
         this.sidebarOpen = window.innerWidth > 768;
+
+        if (this.isDarkTheme) {
+            document.documentElement.classList.add('dark-theme');
+        }
+
         
         // Intervals and timers
         this.updateInterval = null;
