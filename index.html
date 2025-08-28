@@ -28,15 +28,16 @@
         <div class="control-group">
             <button id="theme-toggle" class="btn btn--secondary control-btn">
                 <span class="theme-icon">🌙</span>
+                <span class="btn-text">Alternar Tema</span>
             </button>
             <button id="find-location" class="btn btn--secondary control-btn">
                 <span>📍</span>
                 <span class="btn-text">Minha Localização</span>
             </button>
             <button id="center-usp" class="btn btn--secondary control-btn">
-                <span>🏫</span>
-                <span class="btn-text">Centralizar USP</span>
-            </button>
+                <span>🎓</span>
+                <span class="btn-text">Panorama USP</span>
+            </button>   
         </div>
         <div class="api-status">
             <span id="connection-status" class="status status--info">Conectando...</span>
@@ -104,6 +105,10 @@
                 <div class="stat-item">
                     <span class="stat-label">Última Atualização</span>
                     <span class="stat-value" id="update-time">-</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Tempo de Espera</span>
+                    <span class="stat-value" id="waiting-time">-</span>
                 </div>
             </div>
             <div id="selected-bus-info" class="selected-bus-info" style="display: none;">

@@ -8,7 +8,7 @@ class BusTracker {
                 name: "Cidade Universitária – Metrô Butantã",
                 color: "#FF6B6B",
                 operating_hours: "04:00-00:43",
-                frequency: "12-17 min"
+                frequency: "Variable"
             },
             {
                 code: "8083-10", 
@@ -85,25 +85,12 @@ class BusTracker {
         this.map = L.map('map', {
             center: [this.uspLocation.lat, this.uspLocation.lng],
             zoom: 15,
-            minZoom: 12,
+            minZoom: 10,
             maxZoom: 18
         });
 
         // Add tile layer based on theme
         this.updateMapTiles();
-
-        // Add USP marker
-        const uspIcon = L.divIcon({
-            className: 'usp-marker',
-            html: '🏫',
-            iconSize: [30, 30],
-            iconAnchor: [15, 15]
-        });
-
-        L.marker([this.uspLocation.lat, this.uspLocation.lng], { icon: uspIcon })
-            .addTo(this.map)
-            .bindPopup('<strong>USP Butantã Campus</strong><br>Centro de referência')
-            .openPopup();
     }
 
     updateMapTiles() {
@@ -505,7 +492,7 @@ class BusTracker {
 
     centerOnUSP() {
         this.map.setView([this.uspLocation.lat, this.uspLocation.lng], 15);
-        this.showToast('success', 'Centralizado na USP Butantã');
+        this.showToast('success', 'Centralizado na USP');
     }
 
     toggleTheme() {

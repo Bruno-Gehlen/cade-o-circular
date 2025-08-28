@@ -134,7 +134,7 @@
 
   /* Animation */
   --duration-fast: 150ms;
-  --duration-normal: 250ms;
+  --duration-normal: 350ms;
   --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Layout */
@@ -1234,7 +1234,7 @@ body {
     }
     
     .sidebar.collapsed {
-        transform: translateX(-100%);
+        transform: translateX(-90%);
     }
     
     .sidebar:not(.collapsed) {
