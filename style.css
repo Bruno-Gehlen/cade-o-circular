@@ -854,7 +854,7 @@ body {
     position: fixed;
     top: 80px;
     left: var(--space-16);
-    width: 300px;
+    width: 400px;
     height: calc(100vh - 200px);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
@@ -1234,7 +1234,7 @@ body {
     }
     
     .sidebar.collapsed {
-        transform: translateX(-90%);
+        transform: translateX(-95%);
     }
     
     .sidebar:not(.collapsed) {

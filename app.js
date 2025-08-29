@@ -5,49 +5,49 @@ class BusTracker {
         this.busLines = [
             {
                 code: "8082-10",
-                name: "Cidade Universitária – Metrô Butantã",
+                name: "Cidade Universitária - Metrô Butantã",
                 color: "#FF6B6B",
-                operating_hours: "04:00-00:43",
-                frequency: "Variable"
+                operating_hours: "04:00-01:13",
+                frequency: "10 a 27 Minutos"
             },
             {
                 code: "8083-10", 
-                name: "Cidade Universitária – Metrô Butantã",
+                name: "Cidade Universitária - Metrô Butantã",
                 color: "#4ECDC4",
-                operating_hours: "Variable",
-                frequency: "Variable"
+                operating_hours: "04:30-01:55",
+                frequency: "12 a 34 Minutos"
             },
             {
                 code: "8084-10",
-                name: "Metrô Butantã – Cidade Universitária (Circular)",
+                name: "Metrô Butantã - Cidade Universitária (Circular)",
                 color: "#45B7D1",
                 operating_hours: "05:00-00:40", 
-                frequency: "Variable"
+                frequency: "6 a 34 Minutos"
             },
             {
                 code: "8085-10",
                 name: "P3 Circular USP",
                 color: "#96CEB4",
                 operating_hours: "04:00-01:30",
-                frequency: "Internal campus only"
+                frequency: "16 a 50 Minutos"
             },
             {
                 code: "8012-10",
-                name: "Metrô Butantã – Cidade Universitária",
+                name: "Metrô Butantã - Cidade Universitária",
                 color: "#FECA57",
-                operating_hours: "24 hours",
-                frequency: "Variable"
+                operating_hours: "24 horas",
+                frequency: "19 a 120 Minutos"
             },
             {
                 code: "8022-10",
                 name: "Metrô Butantã – Cidade Universitária", 
                 color: "#FF9FF3",
-                operating_hours: "24 hours",
-                frequency: "Variable"
+                operating_hours: "24 horas",
+                frequency: "30 a 120 Minutos"
             }
         ];
 
-        this.uspLocation = { lat: -23.5587, lng: -46.7318 };
+        this.uspLocation = { lat: -23.562, lng: -46.737};
         this.apiConfig = {
             baseUrl: "http://api.olhovivo.sptrans.com.br/v0",
             corsProxy: "https://api.allorigins.win/raw?url=",
