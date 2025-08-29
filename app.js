@@ -47,7 +47,7 @@ class BusTracker {
             }
         ];
 
-        this.uspLocation = { lat: -23.562, lng: -46.737};
+        this.uspLocation = { lat: -23.561, lng: -46.733};
         this.apiConfig = {
             baseUrl: "http://api.olhovivo.sptrans.com.br/v0",
             corsProxy: "https://api.allorigins.win/raw?url=",
@@ -91,6 +91,18 @@ class BusTracker {
 
         // Add tile layer based on theme
         this.updateMapTiles();
+
+        // Retrair barras ao arrastar o mapa
+        this.map.on('movestart', () => {
+            document.querySelector('.map-container').classList.add('leaflet-drag-target');
+            document.getElementById('sidebar').classList.add('collapsed');
+            document.getElementById('bottom-panel').classList.add('collapsed');
+            document.querySelector('.top-controls').classList.add('collapsed');
+        });
+        this.map.on('moveend', () => {
+            document.querySelector('.map-container').classList.remove('leaflet-drag-target');
+            document.querySelector('.top-controls').classList.remove('collapsed');
+        });
     }
 
     updateMapTiles() {
@@ -107,17 +119,17 @@ class BusTracker {
             : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
         L.tileLayer(tileUrl, {
-            attribution: this.isDarkMode 
-                ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            subdomains: 'abcd',
+            attribution: this.isDarkMode,
+                // ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                // : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            subdomains: 'abc',
             maxZoom: 19
         }).addTo(this.map);
     }
 
     setupUI() {
         // Initialize connection status
-        this.updateConnectionStatus('disconnected', 'Desconectado da API');
+        this.updateConnectionStatus('disconnected', 'Desconectado');
         
         // Set initial theme
         this.updateThemeIcon();
@@ -479,7 +491,7 @@ class BusTracker {
                 this.map.setView([latitude, longitude], 16);
                 
                 button.disabled = false;
-                button.innerHTML = '<span>📍</span> Minha Localização';
+                button.innerHTML = '<span>📍</span>';
                 this.showToast('success', 'Localização encontrada!');
             },
             (error) => {
@@ -554,7 +566,7 @@ class BusTracker {
         messageElement.textContent = message;
         toast.classList.remove('hidden');
 
-        // Auto-hide after 5 seconds
+        // Auto-hide after 2 seconds
         setTimeout(() => {
             this.hideToast(type);
         }, 2000);
@@ -612,7 +624,7 @@ function onDragMove(e) {
     if ((currentX - dragStartX) > 40) {
         sidebar.classList.remove('collapsed');
         if(document.getElementById('sidebar-toggle')) {
-          document.getElementById('sidebar-toggle').textContent = '←';
+          document.getElementById('sidebar-toggle').textContent = '◀️';
         }
         dragging = false;
     }
