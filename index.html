@@ -49,16 +49,16 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h3>Linhas de Ônibus USP</h3>
-            <button id="sidebar-toggle" class="sidebar-toggle">←</button>
+            <button type="button" id="sidebar-toggle" class="sidebar-toggle">←</button>
         </div>
         
         <div class="sidebar-content">
-            <div class="api-config-section">
+            <!-- <div class="api-config-section">
                 <div class="form-group">
                     <input type="password" id="api-key" class="form-control" placeholder="Cole sua chave da API aqui">
                     <button id="connect-api" class="btn btn--primary btn--sm" style="margin-top: 8px;">Conectar</button>
                 </div>
-            </div>
+            </div> -->
 
             <div class="bus-lines-section">
                 <h4>Selecione as Linhas</h4>
@@ -78,6 +78,7 @@
             </div>
         </div>
     </div>
+    <div id="sidebar-drag-handle" class="sidebar-drag-handle"></div>
 
     <!-- Main Map Container -->
     <div class="map-container">

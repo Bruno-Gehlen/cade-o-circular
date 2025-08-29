@@ -469,38 +469,6 @@ pre code {
   cursor: not-allowed;
 }
 
-/* Form elements */
-.form-control {
-  display: block;
-  width: 100%;
-  padding: var(--space-8) var(--space-12);
-  font-size: var(--font-size-md);
-  line-height: 1.5;
-  color: var(--color-text);
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  transition: border-color var(--duration-fast) var(--ease-standard),
-    box-shadow var(--duration-fast) var(--ease-standard);
-}
-
-textarea.form-control {
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-base);
-}
-
-select.form-control {
-  padding: var(--space-8) var(--space-12);
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  background-image: var(--select-caret-light);
-  background-repeat: no-repeat;
-  background-position: right var(--space-12) center;
-  background-size: 16px;
-  padding-right: var(--space-32);
-}
-
 /* Add a dark mode specific caret */
 @media (prefers-color-scheme: dark) {
   select.form-control {
@@ -527,10 +495,6 @@ select.form-control {
   margin-bottom: var(--space-8);
   font-weight: var(--font-weight-medium);
   font-size: var(--font-size-sm);
-}
-
-.form-group {
-  margin-bottom: var(--space-16);
 }
 
 /* Card component */
@@ -852,7 +816,7 @@ body {
 /* Sidebar */
 .sidebar {
     position: fixed;
-    top: 80px;
+    top: 100px;
     left: var(--space-16);
     width: 400px;
     height: calc(100vh - 200px);
@@ -905,10 +869,26 @@ body {
     transform: rotate(180deg);
 }
 
+.sidebar.collapsed .sidebar-header {
+    padding-right: 8px;
+}
+
 .sidebar-content {
     flex: 1;
     overflow-y: auto;
     padding: var(--space-16);
+}
+
+.sidebar-drag-handle {
+  position: absolute;
+  top: 120px;
+  left: 0;
+  width: 10px;  /* Área ‘tocável’/‘clicável’ com touch ou mouse */
+  height: calc(100vh - 180px);
+  z-index: 10001;
+  cursor: ew-resize;
+  background: transparent; /* ou rgba(0,0,0,0.07) só para depuração */
+  /* Deixe sem transição para resposta mais rápida */
 }
 
 .api-config-section,
@@ -1176,6 +1156,7 @@ body {
     position: fixed;
     top: var(--space-20);
     right: var(--space-20);
+    border-radius: var(--radius-lg);
     z-index: 2001;
     min-width: 300px;
     max-width: 400px;
@@ -1282,7 +1263,7 @@ body {
     }
     
     .sidebar {
-        top: 100px;
+        top: 120px;
         height: calc(100vh - 180px);
     }
     

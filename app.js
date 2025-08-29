@@ -165,9 +165,9 @@ class BusTracker {
         });
 
         // API connection
-        document.getElementById('connect-api').addEventListener('click', () => {
-            this.connectToAPI();
-        });
+        // document.getElementById('connect-api').addEventListener('click', () => {
+        //     this.connectToAPI();
+        // });
 
         // Manual refresh
         document.getElementById('manual-refresh').addEventListener('click', () => {
@@ -210,11 +210,11 @@ class BusTracker {
         });
 
         // API key input enter key
-        document.getElementById('api-key').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.connectToAPI();
-            }
-        });
+        // document.getElementById('api-key').addEventListener('keypress', (e) => {
+        //     if (e.key === 'Enter') {
+        //         this.connectToAPI();
+        //     }
+        // });
     }
 
     checkApiKey() {
@@ -473,7 +473,7 @@ class BusTracker {
 
                 this.userMarker = L.marker([latitude, longitude], { icon: userIcon })
                     .addTo(this.map)
-                    .bindPopup('Sua localização atual');
+                    .bindPopup('Você está aqui!');
 
                 // Center map on user location
                 this.map.setView([latitude, longitude], 16);
@@ -500,6 +500,7 @@ class BusTracker {
         document.body.setAttribute('data-color-scheme', this.isDarkMode ? 'dark' : 'light');
         this.updateThemeIcon();
         this.updateMapTiles();
+        this.showToast('success', `Tema alterado para ${this.isDarkMode ? 'escuro' : 'claro'}!`);
     }
 
     updateThemeIcon() {
@@ -556,7 +557,7 @@ class BusTracker {
         // Auto-hide after 5 seconds
         setTimeout(() => {
             this.hideToast(type);
-        }, 5000);
+        }, 2000);
     }
 
     hideToast(type) {
@@ -592,3 +593,42 @@ document.addEventListener('visibilitychange', () => {
         }
     }
 });
+
+const sidebar = document.getElementById('sidebar');
+const dragHandle = document.getElementById('sidebar-drag-handle');
+
+let dragStartX = null;
+let dragging = false;
+
+function onDragStart(e) {
+    dragging = true;
+    dragStartX = e.touches ? e.touches[0].clientX : e.clientX;
+}
+
+function onDragMove(e) {
+    if (!dragging) return;
+    const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+    // se mover mais de 40px para a direita, descolapsa
+    if ((currentX - dragStartX) > 40) {
+        sidebar.classList.remove('collapsed');
+        if(document.getElementById('sidebar-toggle')) {
+          document.getElementById('sidebar-toggle').textContent = '←';
+        }
+        dragging = false;
+    }
+}
+
+function onDragEnd() {
+    dragging = false;
+    dragStartX = null;
+}
+
+// Eventos para mouse
+dragHandle.addEventListener('mousedown', onDragStart);
+document.addEventListener('mousemove', onDragMove);
+document.addEventListener('mouseup', onDragEnd);
+
+// Eventos para touch
+dragHandle.addEventListener('touchstart', onDragStart);
+document.addEventListener('touchmove', onDragMove);
+document.addEventListener('touchend', onDragEnd);
