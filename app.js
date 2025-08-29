@@ -64,7 +64,7 @@ class BusTracker {
         this.userMarker = null;
         this.updateTimer = null;
         this.isDarkMode = true;
-        
+
         // Initialize application
         this.init();
     }
@@ -75,9 +75,29 @@ class BusTracker {
         this.renderBusLines();
         this.bindEvents();
         this.hideLoadingOverlay();
-        
-        // Try to get API key from environment or localStorage
-        this.checkApiKey();
+        // O frontend não acessa process.env. Apenas consome a API do backend.
+        // Aqui, pode-se iniciar a autenticação chamando o backend:
+        this.authenticateWithBackend();
+    }
+
+    async authenticateWithBackend() {
+        // Chama a função serverless para autenticar
+        try {
+            const response = await fetch('/api/sptrans?endpoint=authenticate');
+            const result = await response.json();
+            if (result.success && result.authenticated) {
+                this.authenticated = true;
+                this.sessionCookie = result.sessionCookie;
+                this.updateConnectionStatus('connected', 'Conectado');
+                this.startAutoUpdate();
+            } else {
+                this.updateConnectionStatus('error', 'Falha na autenticação');
+                this.showToast('error', result.error || 'Erro ao autenticar');
+            }
+        } catch (error) {
+            this.updateConnectionStatus('error', 'Erro de conexão');
+            this.showToast('error', 'Erro de conexão com backend');
+        }
     }
 
     setupMap() {
@@ -229,60 +249,7 @@ class BusTracker {
         // });
     }
 
-    checkApiKey() {
-        // Try to get API key from various sources
-        const apiKey = process?.env?.SPTRANS_API_KEY || 
-                     localStorage.getItem('sptrans_api_key') ||
-                     '';
-        
-        if (apiKey) {
-            document.getElementById('api-key').value = apiKey;
-            this.connectToAPI();
-        }
-    }
-
-    async connectToAPI() {
-        const apiKeyInput = document.getElementById('api-key');
-        const apiKey = apiKeyInput.value.trim();
-        
-        if (!apiKey) {
-            this.showToast('error', 'Por favor, insira sua chave da API SPTrans');
-            return;
-        }
-
-        this.apiKey = apiKey;
-        this.updateConnectionStatus('connecting', 'Conectando...');
-
-        try {
-            const authUrl = `${this.apiConfig.corsProxy}${encodeURIComponent(this.apiConfig.baseUrl + '/Login/Autenticar?token=' + apiKey)}`;
-            
-            const response = await fetch(authUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (response.ok) {
-                const result = await response.text();
-                if (result === 'true') {
-                    this.authenticated = true;
-                    localStorage.setItem('sptrans_api_key', apiKey);
-                    this.updateConnectionStatus('connected', 'Conectado com sucesso');
-                    this.showToast('success', 'Conectado à API SPTrans com sucesso!');
-                    this.startAutoUpdate();
-                } else {
-                    throw new Error('Chave de API inválida');
-                }
-            } else {
-                throw new Error('Erro na autenticação');
-            }
-        } catch (error) {
-            this.authenticated = false;
-            this.updateConnectionStatus('error', 'Erro na conexão');
-            this.showToast('error', `Erro ao conectar: ${error.message}`);
-        }
-    }
+    // Métodos removidos: checkApiKey e connectToAPI não são mais necessários no frontend.
 
     async refreshBusData() {
         if (!this.authenticated) {
@@ -326,23 +293,33 @@ class BusTracker {
     }
 
     async getBusPositions(lineCode) {
+        // Busca posição dos ônibus via backend
         try {
-            const positionUrl = `${this.apiConfig.corsProxy}${encodeURIComponent(this.apiConfig.baseUrl + '/Posicao?codigoLinha=' + lineCode)}`;
-            
-            const response = await fetch(positionUrl, {
+            const response = await fetch('/api/sptrans?endpoint=busPositions&lineCode=' + encodeURIComponent(lineCode), {
+                method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
+                body: JSON.stringify({ sessionCookie: this.sessionCookie })
             });
-
-            if (response.ok) {
-                const data = await response.json();
-                return data.l && data.l[0] ? data.l[0].vs : [];
+            const result = await response.json();
+            if (result.success && result.data) {
+                // A API retorna um objeto, mas o frontend espera um array de ônibus
+                // Se vier no formato { l: [{ vs: [...] }] }, retorna o array correto
+                if (result.data.l && Array.isArray(result.data.l) && result.data.l[0]?.vs) {
+                    return result.data.l[0].vs;
+                }
+                // Se vier direto como array, retorna
+                if (Array.isArray(result.data)) {
+                    return result.data;
+                }
+                return [];
             } else {
-                throw new Error('Erro ao buscar posições dos ônibus');
+                this.showToast('error', result.error || 'Erro ao buscar posição dos ônibus');
+                return [];
             }
         } catch (error) {
-            console.error(`Erro ao buscar linha ${lineCode}:`, error);
+            this.showToast('error', 'Erro de conexão com backend');
             return [];
         }
     }
