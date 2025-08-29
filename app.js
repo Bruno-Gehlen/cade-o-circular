@@ -558,7 +558,7 @@ class BusTracker {
         setTimeout(() => {
             const overlay = document.getElementById('loading-overlay');
             overlay.classList.add('hidden');
-        }, 1500);
+        }, 1000);
     }
 }
 

@@ -30,10 +30,8 @@ export default async function handler(req, res) {
             const authResponse = await fetch(
                 `http://api.olhovivo.sptrans.com.br/v0/Login/Autenticar?token=${apiKey}`,
                 {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
+                    method: 'POST'
+                    // Não enviar headers extras, conforme documentação
                 }
             );
 
