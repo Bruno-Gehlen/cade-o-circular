@@ -1,5 +1,5 @@
 {
-  "name": "usp-butanta-bus-monitor",
+  "name": "cade-o-circular",
   "version": "1.0.0",
   "description": "Sistema de monitoramento em tempo real dos ônibus da USP Butantã com integração à API SPTrans",
   "main": "public/index.html",
@@ -22,9 +22,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/username/usp-butanta-bus-monitor"
+    "url": "https://github.com/Bruno-Gehlen/cade-o-circular"
   },
-  "homepage": "https://monitorusp.vercel.app",
+  "homepage": "https://cade-o-circular.vercel.app",
   "dependencies": {
     "node-fetch": "^2.6.7"
   },
