@@ -29,7 +29,7 @@ Sistema de monitoramento em tempo real dos ônibus da USP Butantã com integraç
 | **8084-10** | Metrô Butantã → Cidade Universitária (Circular) | 05:00-00:40 | 6-34 min |
 | **8085-10** | P3 Circular USP (Campus interno) | 04:00-01:30 | 16-50 min |
 | **8012-10** | Metrô Butantã ↔ Cidade Universitária | 24 horas | 19-120 min |
-| **8022-10** | Metrô Butantã ↔ Cidade Universitária | 24 horas | 30-120 min |
+| **8022-10** | Metrô Butantã ↔ Cidade Universitária | 24 horas | 30-120 min |..
 
 ## 🚀 Tecnologias
 
