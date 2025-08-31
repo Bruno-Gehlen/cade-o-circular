@@ -1,0 +1,61 @@
+{
+  "version": 2,
+  "name": "usp-butanta-bus-monitor",
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { 
+          "key": "Access-Control-Allow-Origin", 
+          "value": "*" 
+        },
+        { 
+          "key": "Access-Control-Allow-Methods", 
+          "value": "GET, POST, OPTIONS" 
+        },
+        { 
+          "key": "Access-Control-Allow-Headers", 
+          "value": "Content-Type, Authorization" 
+        }
+      ]
+    },
+    {
+      "source": "/service-worker.js",
+      "headers": [
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
+      ]
+    },
+    {
+      "source": "/manifest.json",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/sptrans",
+      "destination": "/api/sptrans.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/public/$1"
+    }
+  ]
+}
