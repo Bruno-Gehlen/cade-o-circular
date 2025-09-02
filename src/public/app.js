@@ -74,27 +74,7 @@ class BusTracker {
         this.renderBusLines();
         this.bindEvents();
         this.hideLoadingOverlay();
-        this.registerServiceWorker();
         this.startAutoUpdate();
-    }
-
-    async registerServiceWorker() {
-        if ('serviceWorker' in navigator) {
-            try {
-                const registration = await navigator.serviceWorker.register('/service-worker.js');
-                console.log('Service Worker registered successfully:', registration);
-                
-                // Request notification permission
-                if ('Notification' in window) {
-                    const permission = await Notification.requestPermission();
-                    if (permission === 'granted') {
-                        console.log('Notification permission granted');
-                    }
-                }
-            } catch (error) {
-                console.error('Service Worker registration failed:', error);
-            }
-        }
     }
 
     async fetchBusPositions(lineCode) {
