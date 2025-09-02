@@ -41,6 +41,10 @@ async function ensureAuthenticated() {
 authenticate();
 setInterval(authenticate, 15 * 60 * 1000);
 
+export function getAuthStatus() {
+  return { authenticated: !!sessionCookie };
+}
+
 export async function getBusPositions(lineCode) {
   await ensureAuthenticated();
   if (!sessionCookie) {

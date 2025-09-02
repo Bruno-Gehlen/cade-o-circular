@@ -1,7 +1,10 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getBusPositions, getBusRoute } from './api.js';
+import dotenv from 'dotenv';
+import { getBusPositions, getBusRoute, getAuthStatus } from './api.js';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,6 +16,10 @@ const port = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, '../public')));
 
 // API routes
+app.get('/api/status', (req, res) => {
+  res.json(getAuthStatus());
+});
+
 app.get('/api/lines/:lineCode/positions', async (req, res) => {
   const { lineCode } = req.params;
   try {

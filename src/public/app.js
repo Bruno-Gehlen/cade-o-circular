@@ -74,7 +74,30 @@ class BusTracker {
         this.renderBusLines();
         this.bindEvents();
         this.hideLoadingOverlay();
+        this.checkBackendStatus(); // Check status on page load
         this.startAutoUpdate();
+    }
+
+    async checkBackendStatus() {
+        try {
+            const response = await fetch(`${this.apiConfig.baseUrl}/status`);
+            if (response.ok) {
+                const data = await response.json();
+                this.authenticated = data.authenticated;
+                if (this.authenticated) {
+                    this.updateConnectionStatus('success', 'Conectado');
+                } else {
+                    this.updateConnectionStatus('error', 'Falha na autenticação');
+                }
+            } else {
+                this.authenticated = false;
+                this.updateConnectionStatus('error', 'Falha na conexão');
+            }
+        } catch (error) {
+            this.authenticated = false;
+            this.updateConnectionStatus('error', 'Erro de conexão');
+            console.error('Error checking backend status:', error);
+        }
     }
 
     async fetchBusPositions(lineCode) {
@@ -83,20 +106,11 @@ class BusTracker {
             if (response.ok) {
                 const data = await response.json();
                 this.updateBusMarkers(lineCode, data.vs || []);
-                if (!this.authenticated) {
-                    this.authenticated = true;
-                    this.updateConnectionStatus('success', 'Conectado');
-                    this.showToast('success', 'Conectado com sucesso!');
-                }
             } else {
                 console.error(`Failed to fetch positions for line ${lineCode}`);
-                this.authenticated = false;
-                this.updateConnectionStatus('error', 'Falha na conexão');
             }
         } catch (error) {
             console.error(`Error fetching positions for line ${lineCode}:`, error);
-            this.authenticated = false;
-            this.updateConnectionStatus('error', 'Erro de conexão');
         }
     }
 
@@ -547,7 +561,10 @@ class BusTracker {
         }
 
         this.updateTimer = setInterval(() => {
-            this.refreshBusData();
+            this.checkBackendStatus();
+            if (this.authenticated) {
+                this.refreshBusData();
+            }
         }, this.apiConfig.updateInterval);
 
         console.log(`Auto-update started with ${this.apiConfig.updateInterval}ms interval`);
