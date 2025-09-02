@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadê o Circular - Rastreamento de Ônibus em Tempo Real</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#32a0cd">
+    <link rel="icon" href="/favicon.ico">
+</head>
+<body data-color-scheme="dark">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>Carregando dados dos ônibus...</p>
+    </div>
+
+    <!-- Top Control Bar -->
+    <div class="top-controls">
+        <div class="control-group">
+            <button id="theme-toggle" class="btn btn--secondary control-btn">
+                <span class="theme-icon">🌙</span>
+                <span class="btn-text">Mudar tema</span>
+            </button>
+            <button id="find-location" class="btn btn--secondary control-btn">
+                <span>📍</span>
+                <span class="btn-text">Minha Localização</span>
+            </button>
+            <button id="center-usp" class="btn btn--secondary control-btn">
+                <span>🎓</span>
+                <span class="btn-text">Centralizar USP</span>
+            </button>
+        </div>
+        <div class="api-status">
+            <span id="connection-status" class="status status--info">Conectando...</span>
+            <span id="last-update">Nunca atualizado</span>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3>Linhas de Ônibus USP</h3>
+            <button id="sidebar-toggle" class="sidebar-toggle">◀️</button>
+        </div>
+        
+        <div class="sidebar-content">
+
+            <div class="bus-lines-section">
+                <h4>Selecionar Linhas</h4>
+                <div class="line-actions">
+                    <button id="select-all-btn" class="btn btn--sm btn--secondary">Todas</button>
+                    <button id="select-none-btn" class="btn btn--sm btn--secondary">Nenhuma</button>
+                    <button id="refresh-btn" class="btn btn--sm btn--primary">Atualizar</button>
+                </div>
+                <div id="bus-lines-container"></div>
+            </div>
+        </div>
+    </div>
+    <div id="sidebar-drag-handle" class="sidebar-drag-handle"></div>
+
+    <!-- Map Container -->
+    <div class="map-container">
+        <div id="map"></div>
+    </div>
+
+    <!-- Bottom Panel -->
+    <div class="bottom-panel" id="bottom-panel">
+        <div class="panel-header">
+            <h4>Estatísticas em Tempo Real</h4>
+            <button id="panel-toggle" class="panel-toggle">🔽</button>
+        </div>
+        <div class="panel-content">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Linhas Ativas</div>
+                    <div class="stat-value" id="active-lines">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Ônibus no Mapa</div>
+                    <div class="stat-value" id="total-buses">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Status</div>
+                    <div class="stat-value" style="font-size: 14px; color: var(--color-primary);" id="status-text">Carregando</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Previsão</div>
+                    <div class="stat-value" style="font-size: 14px; color: var(--color-primary);" id="status-text">Em construção...</div>
+                </div>
+            </div>
+
+            <div id="selected-bus-info" class="selected-bus-info" style="display: none;">
+                <h5>Informações do Ônibus</h5>
+                <div id="bus-details"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="error-toast" class="error-toast hidden">
+        <div class="toast-content">
+            <span>⚠️</span>
+            <span id="toast-message">Erro</span>
+            <button id="close-error" class="toast-close">×</button>
+        </div>
+    </div>
+
+    <div id="success-toast" class="success-toast hidden">
+        <div class="toast-content">
+            <span>✅</span>
+            <span id="success-message">Sucesso</span>
+            <button id="close-success" class="toast-close">×</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Application JS -->
+    <script src="app.js"></script>
+</body>
+</html>

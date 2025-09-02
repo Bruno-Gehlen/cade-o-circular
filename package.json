@@ -1,45 +1,26 @@
 {
-  "name": "cade-o-circular",
+  "name": "usp-bus-monitor",
   "version": "1.0.0",
-  "description": "Sistema de monitoramento em tempo real dos ônibus da USP Butantã com integração à API SPTrans",
-  "main": "public/index.html",
+  "description": "Sistema de monitoramento em tempo real dos ônibus da USP Butantã",
+  "main": "index.html",
   "scripts": {
-    "dev:static": "live-server public/",
-    "dev:api": "vercel dev",
-    "dev:all": "npm-run-all --parallel dev:static dev:api"
+    "dev": "vercel dev",
+    "build": "echo 'No build needed'",
+    "start": "vercel dev"
   },
   "keywords": [
     "usp",
     "butanta",
     "bus",
     "sptrans",
-    "real-time",
-    "pwa",
-    "transport",
-    "sao-paulo"
+    "real-time"
   ],
-  "author": "Bruno Gehlen <brunogfdsilva@gmail.com>",
+  "author": "Bruno Gehlen",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Bruno-Gehlen/cade-o-circular"
-  },
-  "homepage": "https://cade-o-circular.vercel.app",
   "dependencies": {
-    "node-fetch": "^2.6.7"
-  },
-  "devDependencies": {
-    "@vercel/node": "^3.0.0",
-    "npm-run-all": "^4.1.5"
+    "node-fetch": "^2.7.0"
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "vercel": {
-    "functions": {
-      "api/sptrans.js": {
-        "maxDuration": 30
-      }
-    }
   }
 }

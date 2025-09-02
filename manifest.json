@@ -1,0 +1,58 @@
+{
+  "name": "Monitor Ônibus USP Butantã",
+  "short_name": "USP Bus",
+  "description": "Monitoramento em tempo real dos ônibus da USP Butantã",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1f2121",
+  "theme_color": "#32a0cd",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16 32x32 48x48",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "192x192",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "512x512",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "navigation", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Ver todas as linhas",
+      "short_name": "Todas",
+      "description": "Visualizar todos os ônibus ativos",
+      "url": "/?view=all",
+      "icons": [
+        {
+          "src": "/favicon.ico",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Minha localização",
+      "short_name": "Localização",
+      "description": "Centralizar no meu local",
+      "url": "/?action=location",
+      "icons": [
+        {
+          "src": "/favicon.ico",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}
