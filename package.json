@@ -2,11 +2,14 @@
   "name": "usp-bus-monitor",
   "version": "1.0.0",
   "description": "Sistema de monitoramento em tempo real dos ônibus da USP Butantã",
-  "main": "index.html",
+  "main": "src/server/server.js",
+  "type": "module",
   "scripts": {
-    "dev": "vercel dev",
-    "build": "echo 'No build needed'",
-    "start": "vercel dev"
+    "start": "node src/server/server.js",
+    "dev": "concurrently \"npm run server\" \"npm run vite\"",
+    "server": "node src/server/server.js",
+    "vite": "vite",
+    "build": "vite build"
   },
   "keywords": [
     "usp",
@@ -18,7 +21,12 @@
   "author": "Bruno Gehlen",
   "license": "MIT",
   "dependencies": {
-    "node-fetch": "^2.7.0"
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "vite": "^5.0.11"
   },
   "engines": {
     "node": ">=18.0.0"

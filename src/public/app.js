@@ -49,7 +49,7 @@ class BusTracker {
 
         this.uspLocation = { lat: -23.561, lng: -46.733 };
         this.apiConfig = {
-            baseUrl: '/api/sptrans', // Simplified - always use relative path
+            baseUrl: '/api',
             updateInterval: 30000,
             retryAttempts: 3
         };
@@ -57,9 +57,9 @@ class BusTracker {
         // State management
         this.map = null;
         this.authenticated = false;
-        this.sessionCookie = null;
         this.activeBusLines = new Set();
         this.busMarkers = new Map();
+        this.routeLayers = new Map();
         this.userMarker = null;
         this.updateTimer = null;
         this.isDarkMode = true;
@@ -75,9 +75,7 @@ class BusTracker {
         this.bindEvents();
         this.hideLoadingOverlay();
         this.registerServiceWorker();
-        
-        // Start authentication process
-        this.authenticateWithBackend();
+        this.startAutoUpdate();
     }
 
     async registerServiceWorker() {
@@ -99,102 +97,38 @@ class BusTracker {
         }
     }
 
-    async authenticateWithBackend() {
+    async fetchBusPositions(lineCode) {
         try {
-            this.updateConnectionStatus('info', 'Conectando...');
-            
-            const response = await fetch(`${this.apiConfig.baseUrl}?endpoint=authenticate`, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
+            const response = await fetch(`${this.apiConfig.baseUrl}/lines/${lineCode}/positions`);
+            if (response.ok) {
+                const data = await response.json();
+                this.updateBusMarkers(lineCode, data.vs || []);
+                if (!this.authenticated) {
+                    this.authenticated = true;
+                    this.updateConnectionStatus('success', 'Conectado');
+                    this.showToast('success', 'Conectado com sucesso!');
                 }
-            });
-
-            const result = await response.json();
-
-            if (result.success && result.authenticated) {
-                this.authenticated = true;
-                this.sessionCookie = result.sessionCookie;
-                this.updateConnectionStatus('success', 'Conectado');
-                this.showToast('success', 'Conectado com sucesso!');
-                this.startAutoUpdate();
-                console.log('Authentication successful');
             } else {
-                this.updateConnectionStatus('error', 'Falha na autenticação');
-                this.showToast('error', result.error || 'Erro ao autenticar com SPTrans');
-                console.error('Authentication failed:', result);
+                console.error(`Failed to fetch positions for line ${lineCode}`);
+                this.authenticated = false;
+                this.updateConnectionStatus('error', 'Falha na conexão');
             }
         } catch (error) {
+            console.error(`Error fetching positions for line ${lineCode}:`, error);
+            this.authenticated = false;
             this.updateConnectionStatus('error', 'Erro de conexão');
-            this.showToast('error', 'Erro de conexão. Verifique sua internet.');
-            console.error('Authentication error:', error);
-            
-            // Retry authentication after delay
-            setTimeout(() => {
-                this.authenticateWithBackend();
-            }, 10000);
         }
     }
 
     async refreshBusData() {
-        if (!this.authenticated || !this.sessionCookie || this.activeBusLines.size === 0) {
+        if (this.activeBusLines.size === 0) {
             return;
         }
-
-        console.log(`Refreshing data for ${this.activeBusLines.size} active lines`);
-        
-        try {
-            for (const lineCode of this.activeBusLines) {
-                await this.fetchBusPositions(lineCode);
-                // Add small delay between requests to avoid rate limiting
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-            
-            this.updateLastUpdateTime();
-            this.updateStats();
-        } catch (error) {
-            console.error('Error refreshing bus data:', error);
-            this.showToast('error', 'Erro ao atualizar dados dos ônibus');
-            
-            // If authentication failed, retry authentication
-            if (error.message.includes('401') || error.message.includes('authentication')) {
-                this.authenticated = false;
-                this.authenticateWithBackend();
-            }
+        for (const lineCode of this.activeBusLines) {
+            await this.fetchBusPositions(lineCode);
         }
-    }
-
-    async fetchBusPositions(lineCode) {
-        if (!this.sessionCookie) {
-            throw new Error('No session cookie available');
-        }
-
-        try {
-            const response = await fetch(`${this.apiConfig.baseUrl}?endpoint=busPositions&lineCode=${encodeURIComponent(lineCode)}`, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ sessionCookie: this.sessionCookie })
-            });
-
-            const result = await response.json();
-
-            if (result.success && result.data) {
-                this.updateBusMarkers(lineCode, result.data.vs || []);
-                console.log(`Updated ${result.data.vs?.length || 0} buses for line ${lineCode}`);
-            } else {
-                console.error(`Failed to fetch positions for line ${lineCode}:`, result);
-                if (response.status === 401) {
-                    throw new Error('Authentication required');
-                }
-            }
-        } catch (error) {
-            console.error(`Error fetching positions for line ${lineCode}:`, error);
-            throw error;
-        }
+        this.updateLastUpdateTime();
+        this.updateStats();
     }
 
     setupMap() {
@@ -414,12 +348,48 @@ class BusTracker {
         this.busMarkers.clear();
     }
 
+    async fetchBusRoute(lineCode) {
+        try {
+            const response = await fetch(`${this.apiConfig.baseUrl}/lines/${lineCode}/route`);
+            if (response.ok) {
+                const routeData = await response.json();
+                this.drawBusRoute(lineCode, routeData);
+            } else {
+                console.error(`Failed to fetch route for line ${lineCode}`);
+            }
+        } catch (error) {
+            console.error(`Error fetching route for line ${lineCode}:`, error);
+        }
+    }
+
+    drawBusRoute(lineCode, routeData) {
+        if (this.routeLayers.has(lineCode)) {
+            this.map.removeLayer(this.routeLayers.get(lineCode));
+        }
+
+        const lineConfig = this.busLines.find(line => line.code === lineCode);
+        if (!lineConfig) return;
+
+        const latlngs = routeData.map(point => [point.lat, point.lon]);
+        const polyline = L.polyline(latlngs, { color: lineConfig.color }).addTo(this.map);
+        this.routeLayers.set(lineCode, polyline);
+    }
+
+    clearBusRoute(lineCode) {
+        if (this.routeLayers.has(lineCode)) {
+            this.map.removeLayer(this.routeLayers.get(lineCode));
+            this.routeLayers.delete(lineCode);
+        }
+    }
+
     toggleBusLine(lineCode, isActive) {
         const lineItem = document.querySelector(`[data-line="${lineCode}"]`)?.closest('.bus-line-item');
         
         if (isActive) {
             this.activeBusLines.add(lineCode);
             lineItem?.classList.add('active');
+            this.fetchBusPositions(lineCode);
+            this.fetchBusRoute(lineCode);
         } else {
             this.activeBusLines.delete(lineCode);
             lineItem?.classList.remove('active');
@@ -433,12 +403,10 @@ class BusTracker {
                 }
             });
             markersToRemove.forEach(key => this.busMarkers.delete(key));
+            this.clearBusRoute(lineCode);
         }
 
         this.updateStats();
-        if (this.authenticated && isActive) {
-            this.fetchBusPositions(lineCode);
-        }
     }
 
     selectAllLines(select) {
@@ -599,9 +567,7 @@ class BusTracker {
         }
 
         this.updateTimer = setInterval(() => {
-            if (this.authenticated && this.activeBusLines.size > 0) {
-                this.refreshBusData();
-            }
+            this.refreshBusData();
         }, this.apiConfig.updateInterval);
 
         console.log(`Auto-update started with ${this.apiConfig.updateInterval}ms interval`);
@@ -665,13 +631,6 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // Handle online/offline events
-window.addEventListener('online', () => {
-    if (window.busTracker && !window.busTracker.authenticated) {
-        console.log('Connection restored - attempting authentication');
-        window.busTracker.authenticateWithBackend();
-    }
-});
-
 window.addEventListener('offline', () => {
     if (window.busTracker) {
         window.busTracker.updateConnectionStatus('error', 'Sem conexão');

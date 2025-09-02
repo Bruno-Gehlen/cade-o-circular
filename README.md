@@ -27,17 +27,21 @@ Sistema simplificado de monitoramento em tempo real dos ônibus da USP Butantã 
 
 ```
 usp-bus-monitor/
-├── public/
-│   ├── index.html          # Interface principal
-│   ├── style.css           # Estilos
-│   ├── app.js              # Lógica da aplicação
-│   ├── service-worker.js   # PWA features
-│   ├── manifest.json       # PWA config
-│   └── favicon.ico         # Ícone
-├── server.js               # Servidor Node.js
-├── package.json            # Dependências
-├── .gitignore              # Arquivos ignorados
-└── README.md               # Documentação
+├── src/
+│   ├── public/
+│   │   ├── index.html
+│   │   ├── style.css
+│   │   ├── app.js
+│   │   ├── service-worker.js
+│   │   ├── manifest.json
+│   │   └── favicon.ico
+│   └── server/
+│       ├── server.js
+│       └── api.js
+├── package.json
+├── vite.config.js
+├── .gitignore
+└── README.md
 ```
 
 ## 🚀 Como usar
@@ -55,95 +59,72 @@ npm install
 Você precisa de uma chave da API SPTrans:
 
 1. Registre-se em: [SPTrans Desenvolvedores](https://www.sptrans.com.br/desenvolvedores/)
-2. Configure a variável de ambiente:
+2. Crie um arquivo `.env` na raiz do projeto e adicione a seguinte linha:
 
-**Desenvolvimento local:**
-```bash
-export SPTRANS_API_KEY=sua_chave_aqui
 ```
-
-**No Vercel:**
-- Acesse o dashboard do Vercel
-- Vá em Settings > Environment Variables
-- Adicione `SPTRANS_API_KEY` com sua chave
+SPTRANS_API_KEY=sua_chave_aqui
+```
 
 ### 3. Executar
 
 **Desenvolvimento:**
 ```bash
 npm run dev
-# ou
-npm start
 ```
 
 **Produção:**
 ```bash
+npm run build
 npm start
 ```
 
-O servidor será iniciado na porta 3000 (ou PORT definida no ambiente).
-
-## 🌐 Deploy no Vercel
-
-1. **Via Dashboard:**
-   - Conecte seu repositório GitHub
-   - Configure `SPTRANS_API_KEY` em Environment Variables
-   - Deploy automático
-
-2. **Via CLI:**
-   ```bash
-   npm i -g vercel
-   vercel login
-   vercel env add SPTRANS_API_KEY
-   vercel --prod
-   ```
+O servidor de desenvolvimento será iniciado em `http://localhost:5173` e o servidor de produção em `http://localhost:3000`.
 
 ## 🔧 Scripts Disponíveis
 
 ```bash
-npm start       # Inicia o servidor
-npm run dev     # Desenvolvimento (mesmo que start)
-npm run build   # Não necessário (arquivos estáticos)
+npm start       # Inicia o servidor de produção
+npm run dev     # Inicia o servidor de desenvolvimento (backend + vite)
+npm run server  # Inicia o servidor de backend
+npm run vite    # Inicia o servidor de desenvolvimento do vite
+npm run build   # Compila o projeto para produção
 ```
 
 ## 🌟 Como Funciona
 
-1. **Servidor Node.js** (`server.js`):
-   - Serve arquivos estáticos da pasta `public/`
-   - Faz proxy para API SPTrans (resolve CORS)
-   - Gerencia autenticação e cookies
+1. **Backend** (`src/server/`):
+   - Servidor Node.js com Express.
+   - Gerencia a autenticação com a API da SPTrans, atualizando o token a cada 15 minutos.
+   - Fornece endpoints para o frontend (`/api/lines/:lineCode/positions` e `/api/lines/:lineCode/route`).
 
-2. **Frontend** (`app.js`):
-   - Chama `/api/sptrans` localmente
-   - Autentica automaticamente
-   - Atualiza posições a cada 30 segundos
-   - Interface responsiva e moderna
+2. **Frontend** (`src/public/`):
+   - Aplicação de página única (SPA) em JavaScript vanilla.
+   - Utiliza o Vite para desenvolvimento e build.
+   - Consome os dados do backend para exibir os ônibus e rotas no mapa.
 
 3. **API SPTrans**:
-   - Autenticação via POST com token
-   - Consulta posições em tempo real
-   - Gerencia sessões com cookies
+   - Autenticação via POST com token.
+   - Consulta posições e trajetos em tempo real.
 
 ## 🐛 Solução de Problemas
 
 **Erro de autenticação:**
-- Verifique se `SPTRANS_API_KEY` está configurada
-- Confirme se a chave é válida
+- Verifique se `SPTRANS_API_KEY` está configurada corretamente no arquivo `.env`.
+- Confirme se a chave é válida.
 
 **Ônibus não aparecem:**
-- Selecione pelo menos uma linha no painel lateral
-- Verifique conexão com internet
+- Selecione pelo menos uma linha no painel lateral.
+- Verifique a conexão com a internet.
 
 **Geolocalização não funciona:**
-- Site deve estar em HTTPS
-- Permita acesso à localização no navegador
+- O site deve estar em HTTPS para a geolocalização funcionar.
+- Permita o acesso à localização no navegador.
 
 ## 📝 Tecnologias
 
 - **Backend**: Node.js + Express
-- **Frontend**: JavaScript vanilla + Leaflet.js
+- **Frontend**: JavaScript vanilla + Leaflet.js + Vite
 - **API**: SPTrans Olho Vivo v2.1
-- **Deploy**: Vercel
 
 ## 📄 Licença
 
