@@ -12,8 +12,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Serve static files from the 'public' directory
-app.use(express.static(path.join(__dirname, '../public')));
+// Serve static files from the 'dist' directory, which contains the Vite build output
+const distPath = path.join(__dirname, '../../dist');
+app.use(express.static(distPath));
 
 // API routes
 app.get('/api/status', (req, res) => {
@@ -40,9 +41,9 @@ app.get('/api/lines/:lineCode/route', async (req, res) => {
   }
 });
 
-// Catch-all to serve index.html for any other request
+// Catch-all to serve index.html for any other request (for SPA routing)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public', 'index.html'));
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 app.listen(port, () => {
