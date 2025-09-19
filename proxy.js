@@ -1,254 +1,221 @@
-
-// proxy.js - Servidor proxy para resolver CORS da API SPTrans (ES Modules)
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 
-const app = express();
-const port = process.env.PORT || 3010; // Usar porta diferente do servidor principal
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Configuração CORS para permitir o frontend
+const app = express();
+const PORT = process.env.PORT || 3000;
+const SPTRANS_BASE_URL = 'http://api.olhovivo.sptrans.com.br/v2.1';
+
+// Configuração CORS
 app.use(cors({
-  origin: [
-    'http://127.0.0.1:5500', 
-    'http://localhost:5500', 
-    'http://localhost:3000'
-  ],
-  credentials: true,
-  optionsSuccessStatus: 200
+  origin: '*',
+  credentials: true
 }));
 
 app.use(express.json());
+app.use(express.static(__dirname));
 
-// Variáveis para gerenciar a sessão da API SPTrans
-let sessionCookie = null;
-const SPTRANS_API_KEY = process.env.SPTRANS_API_KEY;
-const SPTRANS_BASE_URL = 'http://api.olhovivo.sptrans.com.br/v2.1';
+// Variáveis de autenticação
+let isAuthenticated = false;
+let authCookies = '';
 
-// Função para autenticar na API SPTrans
+// Função de autenticação
 async function authenticate() {
-  if (!SPTRANS_API_KEY) {
-    console.error('SPTRANS_API_KEY não definida no arquivo .env');
-    return false;
-  }
-
   try {
-    console.log('Tentando autenticar na API SPTrans...');
-    const response = await fetch(`${SPTRANS_BASE_URL}/Login/Autenticar?token=${SPTRANS_API_KEY}`, {
+    console.log('🔐 Tentando autenticar na API SPTrans...');
+    
+    const response = await fetch(`${SPTRANS_BASE_URL}/Login/Autenticar?token=${process.env.SPTRANS_API_KEY}`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
     });
 
     if (response.ok && response.headers.get('set-cookie')) {
-      sessionCookie = response.headers.get('set-cookie');
-      console.log('✅ Autenticado com sucesso na API SPTrans');
+      authCookies = response.headers.get('set-cookie');
+      isAuthenticated = true;
+      console.log('✅ Autenticado na API SPTrans');
       return true;
     } else {
-      console.error('❌ Falha na autenticação com a API SPTrans:', response.status);
-      sessionCookie = null;
+      console.error('❌ Falha na autenticação SPTrans');
+      isAuthenticated = false;
       return false;
     }
   } catch (error) {
     console.error('❌ Erro na autenticação:', error.message);
-    sessionCookie = null;
+    isAuthenticated = false;
     return false;
   }
 }
 
 // Middleware para garantir autenticação
 async function ensureAuthenticated(req, res, next) {
-  if (!sessionCookie) {
+  if (!isAuthenticated) {
     const success = await authenticate();
     if (!success) {
-      return res.status(500).json({ 
-        error: 'Falha na autenticação com a API SPTrans',
-        authenticated: false
+      return res.status(503).json({ 
+        error: 'Falha na autenticação com API SPTrans',
+        details: 'Verifique se o token está correto no arquivo .env'
       });
     }
   }
   next();
 }
 
-// Middleware para logs de debug
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
-});
-
-// Rota de health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    authenticated: !!sessionCookie,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Rota proxy para verificar status
-app.get('/api/status', (req, res) => {
-  res.json({ 
-    authenticated: !!sessionCookie,
-    message: sessionCookie ? 'Conectado à API SPTrans' : 'Desconectado da API SPTrans',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Rota proxy para buscar posições dos ônibus por linha
-app.get('/api/Posicao/Linha', ensureAuthenticated, async (req, res) => {
+// ENDPOINT CORRIGIDO: Status da API
+app.get('/api/status', ensureAuthenticated, async (req, res) => {
   try {
-    const { codigoLinha } = req.query;
-
-    if (!codigoLinha) {
-      return res.status(400).json({ error: 'Parâmetro codigoLinha é obrigatório' });
-    }
-
-    console.log(`Buscando posições para linha: ${codigoLinha}`);
-
-    const response = await fetch(`${SPTRANS_BASE_URL}/Posicao/Linha?codigoLinha=${codigoLinha}`, {
+    const response = await fetch(`${SPTRANS_BASE_URL}/status`, {
       headers: {
-        Cookie: sessionCookie,
-      },
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log(`✅ Encontrados ${data.vs?.length || 0} veículos para linha ${codigoLinha}`);
-      res.json(data);
-    } else {
-      console.error(`❌ Erro na API SPTrans: ${response.status}`);
-
-      // Se não autorizado, tentar reautenticar
-      if (response.status === 401) {
-        sessionCookie = null;
-        return res.status(401).json({ error: 'Sessão expirada, necessário reautenticar' });
+        'Cookie': authCookies
       }
-
-      res.status(response.status).json({ error: 'Erro na API SPTrans' });
-    }
+    });
+    
+    const data = await response.text();
+    res.json({ 
+      status: 'ok',
+      authenticated: isAuthenticated,
+      sptransStatus: data,
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    console.error('❌ Erro ao buscar posições:', error.message);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Rota proxy para buscar informações de linhas
-app.get('/api/Linha/Buscar', ensureAuthenticated, async (req, res) => {
+// ENDPOINT CORRIGIDO: Posições dos ônibus por linha
+app.get('/api/lines/:code/positions', ensureAuthenticated, async (req, res) => {
   try {
-    const { termosBusca } = req.query;
+    const { code } = req.params;
+    console.log(`🚌 Buscando posições para linha: ${code}`);
 
-    if (!termosBusca) {
-      return res.status(400).json({ error: 'Parâmetro termosBusca é obrigatório' });
-    }
-
-    console.log(`Buscando linhas com termo: ${termosBusca}`);
-
-    const response = await fetch(`${SPTRANS_BASE_URL}/Linha/Buscar?termosBusca=${termosBusca}`, {
+    // Primeiro busca o código da linha
+    const lineResponse = await fetch(`${SPTRANS_BASE_URL}/Linha/Buscar?termosBusca=${code}`, {
       headers: {
-        Cookie: sessionCookie,
-      },
+        'Cookie': authCookies
+      }
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log(`✅ Encontradas ${data.length || 0} linhas`);
-      res.json(data);
-    } else {
-      console.error(`❌ Erro na API SPTrans: ${response.status}`);
-
-      if (response.status === 401) {
-        sessionCookie = null;
-        return res.status(401).json({ error: 'Sessão expirada, necessário reautenticar' });
-      }
-
-      res.status(response.status).json({ error: 'Erro na API SPTrans' });
+    if (!lineResponse.ok) {
+      throw new Error(`Erro ao buscar linha: ${lineResponse.status}`);
     }
+
+    const lines = await lineResponse.json();
+    console.log(`📋 Linhas encontradas: ${lines.length}`);
+
+    if (!lines || lines.length === 0) {
+      return res.json({ 
+        error: `Linha ${code} não encontrada`,
+        buses: [],
+        lineInfo: null
+      });
+    }
+
+    // Pega a primeira linha que corresponde
+    const targetLine = lines.find(line => line.letreiro && line.letreiro.includes(code)) || lines[0];
+    console.log(`🎯 Linha selecionada: ${targetLine.letreiro} (ID: ${targetLine.cl})`);
+
+    // Busca as posições dos ônibus desta linha
+    const positionResponse = await fetch(`${SPTRANS_BASE_URL}/Posicao/Linha?codigoLinha=${targetLine.cl}`, {
+      headers: {
+        'Cookie': authCookies
+      }
+    });
+
+    if (!positionResponse.ok) {
+      throw new Error(`Erro ao buscar posições: ${positionResponse.status}`);
+    }
+
+    const positionData = await positionResponse.json();
+    
+    // Extrai os ônibus se existirem
+    const buses = positionData.l && positionData.l.length > 0 && positionData.l[0].vs 
+      ? positionData.l[0].vs.map(bus => ({
+          id: bus.p,
+          lat: bus.py,
+          lng: bus.px,
+          direction: bus.a || 0,
+          timestamp: bus.ta || new Date().toISOString()
+        }))
+      : [];
+
+    console.log(`🚌 Ônibus encontrados: ${buses.length}`);
+
+    res.json({
+      success: true,
+      lineCode: code,
+      lineInfo: {
+        id: targetLine.cl,
+        name: targetLine.letreiro,
+        direction: targetLine.sentido
+      },
+      buses: buses,
+      timestamp: new Date().toISOString()
+    });
+
   } catch (error) {
-    console.error('❌ Erro ao buscar linhas:', error.message);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error(`❌ Erro ao buscar posições da linha ${req.params.code}:`, error.message);
+    res.status(400).json({ 
+      error: error.message,
+      lineCode: req.params.code,
+      buses: [],
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
-// Rota proxy para buscar paradas
-app.get('/api/Parada/Buscar', ensureAuthenticated, async (req, res) => {
+// ENDPOINT ADICIONAL: Buscar linhas
+app.get('/api/lines/search', ensureAuthenticated, async (req, res) => {
   try {
-    const { termosBusca } = req.query;
-
-    if (!termosBusca) {
-      return res.status(400).json({ error: 'Parâmetro termosBusca é obrigatório' });
-    }
-
-    console.log(`Buscando paradas com termo: ${termosBusca}`);
-
-    const response = await fetch(`${SPTRANS_BASE_URL}/Parada/Buscar?termosBusca=${termosBusca}`, {
+    const { term } = req.query;
+    
+    const response = await fetch(`${SPTRANS_BASE_URL}/Linha/Buscar?termosBusca=${term}`, {
       headers: {
-        Cookie: sessionCookie,
-      },
+        'Cookie': authCookies
+      }
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log(`✅ Encontradas ${data.length || 0} paradas`);
-      res.json(data);
-    } else {
-      console.error(`❌ Erro na API SPTrans: ${response.status}`);
-
-      if (response.status === 401) {
-        sessionCookie = null;
-        return res.status(401).json({ error: 'Sessão expirada, necessário reautenticar' });
-      }
-
-      res.status(response.status).json({ error: 'Erro na API SPTrans' });
-    }
+    const lines = await response.json();
+    res.json(lines);
   } catch (error) {
-    console.error('❌ Erro ao buscar paradas:', error.message);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Rota para forçar reautenticação
-app.post('/api/reauth', async (req, res) => {
-  console.log('Forçando reautenticação...');
-  sessionCookie = null;
-  const success = await authenticate();
-
-  res.json({
-    success,
-    message: success ? 'Reautenticação bem-sucedida' : 'Falha na reautenticação',
-    authenticated: !!sessionCookie
-  });
+// Servir arquivos estáticos
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Tratamento de erros global
-app.use((error, req, res, next) => {
-  console.error('❌ Erro não tratado:', error);
-  res.status(500).json({ error: 'Erro interno do servidor' });
-});
-
-// Autenticar imediatamente ao iniciar
-console.log('🚀 Iniciando servidor proxy...');
-authenticate().then(() => {
-  app.listen(port, () => {
-    console.log(`🌐 Servidor proxy rodando na porta ${port}`);
-    console.log(`📍 Health check: http://localhost:${port}/health`);
-    console.log(`🔗 Status API: http://localhost:${port}/api/status`);
-  });
-});
-
-// Re-autenticar a cada 15 minutos para manter a sessão ativa
-setInterval(() => {
-  console.log('🔄 Reautenticando automaticamente...');
-  authenticate();
+// Re-autenticação automática a cada 15 minutos
+setInterval(async () => {
+  console.log('🔄 Re-autenticando automaticamente...');
+  await authenticate();
 }, 15 * 60 * 1000);
 
-// Tratamento graceful de shutdown
-process.on('SIGINT', () => {
-  console.log('\n🛑 Shutting down servidor proxy...');
-  process.exit(0);
-});
+// Inicialização
+async function startServer() {
+  try {
+    await authenticate();
+    
+    app.listen(PORT, () => {
+      console.log(`🚀 Servidor iniciado com sucesso!`);
+      console.log(`🌐 Acesse: http://localhost:${PORT}`);
+      console.log(`📊 Status: http://localhost:${PORT}/api/status`);
+      console.log(`🚌 Exemplo: http://localhost:${PORT}/api/lines/8082-10/positions`);
+    });
+  } catch (error) {
+    console.error('❌ Erro ao iniciar servidor:', error);
+    process.exit(1);
+  }
+}
 
-process.on('SIGTERM', () => {
-  console.log('\n🛑 Servidor proxy terminado');
-  process.exit(0);
-});
+startServer();
