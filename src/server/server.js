@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import cors from 'cors';
 import { getBusPositions, getBusRoute, getAuthStatus } from './api.js';
 
 dotenv.config();
@@ -12,8 +13,10 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Serve static files from the 'public' directory
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(cors());
+
+// Serve static files from the 'dist' directory
+app.use(express.static(path.join(__dirname, '../../dist')));
 
 // API routes
 app.get('/api/status', (req, res) => {
@@ -42,7 +45,7 @@ app.get('/api/lines/:lineCode/route', async (req, res) => {
 
 // Catch-all to serve index.html for any other request
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public', 'index.html'));
+  res.sendFile(path.join(__dirname, '../../dist', 'index.html'));
 });
 
 app.listen(port, () => {

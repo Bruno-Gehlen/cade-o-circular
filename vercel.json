@@ -3,13 +3,9 @@
   "builds": [
     {
       "src": "src/server/server.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
+      "use": "@vercel/node",
       "config": {
-        "distDir": "dist"
+        "includeFiles": ["dist/**"]
       }
     }
   ],
