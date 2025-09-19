@@ -1,3 +1,43 @@
+async function checkBackendStatus() {
+    try {
+        // Usar o servidor proxy local ao invés da API direta
+        const response = await fetch('http://localhost:3000/api/status');
+
+        if (response.ok) {
+            const data = await response.json();
+            this.authenticated = data.authenticated;
+            if (this.authenticated) {
+                this.updateConnectionStatus('success', 'Conectado');
+            } else {
+                this.updateConnectionStatus('error', 'Falha na autenticação');
+            }
+        } else {
+            this.authenticated = false;
+            this.updateConnectionStatus('error', 'Falha na conexão');
+        }
+    } catch (error) {
+        this.authenticated = false;
+        this.updateConnectionStatus('error', 'Erro de conexão');
+        console.error('Error checking backend status:', error);
+    }
+}
+
+async function fetchBusPositions(lineCode) {
+    try {
+        // Usar o proxy local
+        const response = await fetch(`http://localhost:3000/api/Posicao/Linha?codigoLinha=${lineCode}`);
+
+        if (response.ok) {
+            const data = await response.json();
+            this.updateBusMarkers(lineCode, data.vs || []);
+        } else {
+            console.error(`Failed to fetch positions for line ${lineCode}`);
+        }
+    } catch (error) {
+        console.error(`Error fetching positions for line ${lineCode}:`, error);
+    }
+}
+
 // USP Butantã Bus Tracking Application
 class BusTracker {
     constructor() {

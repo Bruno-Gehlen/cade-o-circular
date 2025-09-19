@@ -1,15 +1,22 @@
 {
   "name": "usp-bus-monitor",
-  "version": "1.0.0",
+  "version": "0.0.3",
   "description": "Sistema de monitoramento em tempo real dos ônibus da USP Butantã",
-  "main": "src/server/server.js",
+  "main": "proxy.js",
   "type": "module",
   "scripts": {
-    "start": "node src/server/server.js",
-    "dev": "concurrently \"npm run server\" \"npm run vite\"",
-    "server": "node src/server/server.js",
-    "vite": "vite",
-    "build": "vite build"
+    "start": "node proxy.js",
+    "dev": "nodemon proxy.js",
+    "server": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   },
   "keywords": [
     "usp",
@@ -19,19 +26,5 @@
     "real-time"
   ],
   "author": "Bruno Gehlen",
-  "license": "MIT",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "node-fetch": "^3.3.2"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2",
-    "vite": "^5.0.11",
-    "vite-plugin-pwa": "^0.17.4"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+  "license": "MIT"
 }

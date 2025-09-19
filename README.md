@@ -27,20 +27,18 @@ Sistema simplificado de monitoramento em tempo real dos ônibus da USP Butantã 
 
 ```
 usp-bus-monitor/
-├── src/
-│   ├── public/
-│   │   ├── index.html
-│   │   ├── style.css
-│   │   ├── app.js
-│   │   ├── service-worker.js
-│   │   ├── manifest.json
-│   │   └── favicon.ico
-│   └── server/
-│       ├── server.js
-│       └── api.js
+├── index.html
+├── style.css
+├── app.js
+├── service-worker.js
+├── manifest.json
+├── favicon.ico
+├── server.js
+├── api.js
+├── proxy.js
 ├── package.json
-├── vite.config.js
 ├── .gitignore
+├── LICENSE.md
 └── README.md
 ```
 
