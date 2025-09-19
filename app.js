@@ -102,7 +102,7 @@ class BusTracker {
 
     async fetchBusPositions(lineCode) {
         try {
-            const response = await fetch(`${this.apiConfig.baseUrl}/lines/${lineCode}/positions`);
+            const response = await fetch(`${this.apiConfig.baseUrl}/Posicao/Linha?codigoLinha=${lineCode}`);
             if (response.ok) {
                 const data = await response.json();
                 this.updateBusMarkers(lineCode, data.vs || []);
@@ -344,7 +344,7 @@ class BusTracker {
 
     async fetchBusRoute(lineCode) {
         try {
-            const response = await fetch(`${this.apiConfig.baseUrl}/lines/${lineCode}/route`);
+            const response = await fetch(`${this.apiConfig.baseUrl}/Linha/Buscar?termosBusca=${lineCode}`);
             if (response.ok) {
                 const routeData = await response.json();
                 this.drawBusRoute(lineCode, routeData);

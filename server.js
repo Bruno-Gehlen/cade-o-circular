@@ -13,7 +13,26 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors());
+// Configuração CORS mais específica
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+  ],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+app.use(express.json());
+
+// Middleware para logs de debug
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 // Serve static files from the 'dist' directory
 app.use(express.static(path.join(__dirname, '../../dist')));
