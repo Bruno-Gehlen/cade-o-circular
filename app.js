@@ -83,6 +83,51 @@ class BusTracker {
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(this.map);
+
+        // ⬇️ Ao mover o mapa, colapsar painéis
+        this.map.on('movestart', () => {
+            document.getElementById('sidebar')?.classList.add('collapsed');
+            document.getElementById('bottom-panel')?.classList.add('collapsed');
+            document.querySelector('.top-controls')?.classList.add('collapsed');
+        });
+        this.map.on('moveend', () => {
+            document.querySelector('.top-controls')?.classList.remove('collapsed');
+        });
+
+        // ⬇️ Drag handle para abrir a sidebar
+        const sidebar = document.getElementById('sidebar');
+        const dragHandle = document.getElementById('sidebar-drag-handle');
+        let dragStartX = null;
+        let dragging = false;
+
+        function onDragStart(e) {
+            dragging = true;
+            dragStartX = e.touches ? e.touches[0].clientX : e.clientX;
+        }
+
+        function onDragMove(e) {
+            if (!dragging) return;
+            const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+            if ((currentX - dragStartX) > 40) {
+                sidebar.classList.remove('collapsed');
+                const toggleBtn = document.getElementById('sidebar-toggle');
+                if (toggleBtn) toggleBtn.textContent = '◀️';
+                dragging = false;
+            }
+        }
+
+        function onDragEnd() {
+            dragging = false;
+            dragStartX = null;
+        }
+
+        dragHandle.addEventListener('mousedown', onDragStart);
+        document.addEventListener('mousemove', onDragMove);
+        document.addEventListener('mouseup', onDragEnd);
+
+        dragHandle.addEventListener('touchstart', onDragStart);
+        document.addEventListener('touchmove', onDragMove);
+        document.addEventListener('touchend', onDragEnd);
     }
 
     setupUI() {
@@ -534,6 +579,8 @@ class BusTracker {
             document.getElementById('loading-overlay')?.classList.add('hidden');
         }, 1500);
     }
+
+    
 
     startAutoUpdate() {
         setInterval(() => {

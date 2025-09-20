@@ -1077,7 +1077,8 @@ body {
     box-shadow: var(--shadow-lg);
     z-index: 1000;
     max-height: 200px;
-    transition: all var(--duration-normal) var(--ease-standard);
+    transition: transform var(--duration-normal) var(--ease-standard),
+                background-color var(--duration-normal) var(--ease-standard);
 }
 
 .bottom-panel.collapsed {
