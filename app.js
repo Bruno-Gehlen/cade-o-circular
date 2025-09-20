@@ -45,7 +45,7 @@ class BusTracker {
             },
             {
                 code: "8022-10",
-                name: "Metrô Butantã – Cidade Universitária",
+                name: "Metrô Butantã - Cidade Universitária",
                 color: "#FF9FF3",
                 operating_hours: "24 horas",
                 frequency: "30 a 120 Minutos"
@@ -128,24 +128,36 @@ class BusTracker {
 
             const icon = document.querySelector('.theme-icon');
             if (icon) icon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+
+            const themeMessage = newTheme === 'dark' ? 'Tema escuro ativado! 🌙' : 'Tema claro ativado! ☀️';
+            this.showToast('success', themeMessage);
         });
 
         // Localização
         document.getElementById('find-location')?.addEventListener('click', () => {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    pos => {
-                        this.map.setView([pos.coords.latitude, pos.coords.longitude], 16);
-                        this.showToast('success', 'Localização encontrada!');
-                    },
-                    () => this.showToast('error', 'Erro ao obter localização')
-                );
-            }
+            this.findUserLocation();
         });
+
+        // document.getElementById('find-location')?.addEventListener('click', () => {
+        //     if (navigator.geolocation) {
+        //         navigator.geolocation.getCurrentPosition(
+        //             pos => {
+        //                 this.map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+        //                 this.showToast('success', 'Localização encontrada! 📍'); 
+        //             },
+        //             () => this.showToast('error', 'Erro ao obter localização 📍') 
+        //         );
+        //     } else {
+        //         // Tratamento quando geolocalização não é suportada
+        //         this.showToast('error', 'Geolocalização não suportada pelo navegador');
+        //     }
+        // });
+        
 
         // Centralizar USP
         document.getElementById('center-usp')?.addEventListener('click', () => {
             this.map.setView([this.uspLocation.lat, this.uspLocation.lng], 15);
+            this.showToast('success', 'Centralizado na USP Butantã! 🎓');
         });
 
         // Toggle sidebar
@@ -159,16 +171,22 @@ class BusTracker {
         });
 
         // Seleção de linhas
+        // Select All
         document.getElementById('select-all-btn')?.addEventListener('click', () => {
             this.selectAllLines(true);
+            this.showToast('success', 'Todas as linhas selecionadas! 🚌'); 
         });
 
+        // Select None  
         document.getElementById('select-none-btn')?.addEventListener('click', () => {
             this.selectAllLines(false);
+            this.showToast('success', 'Todas as linhas desmarcadas'); 
         });
 
+        // Refresh
         document.getElementById('refresh-btn')?.addEventListener('click', () => {
             this.refreshBusData();
+            this.showToast('success', 'Dados atualizados! 🔄'); 
         });
 
         // Checkboxes das linhas
@@ -186,6 +204,159 @@ class BusTracker {
         document.getElementById('close-success')?.addEventListener('click', () => {
             document.getElementById('success-toast')?.classList.add('hidden');
         });
+    }
+
+    // Método melhorado para encontrar localização do usuário
+    async findUserLocation() {
+        const button = document.getElementById('find-location');
+
+        // 1. ✅ VERIFICAÇÃO PRÉVIA - Evita tentativas desnecessárias
+        if (!navigator.geolocation) {
+            this.showToast('error', 'Geolocalização não suportada pelo navegador');
+            return;
+        }
+
+        // 2. ✅ FEEDBACK IMEDIATO - UX melhorada
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<span>📍</span><span class="btn-text">Localizando...</span>';
+            button.classList.add('loading');
+        }
+
+        // 3. ✅ OPÇÕES OTIMIZADAS para melhor precisão e performance
+        const options = {
+            enableHighAccuracy: true,    // Máxima precisão disponível
+            timeout: 10000,             // 10 segundos timeout (era infinito)
+            maximumAge: 300000          // Cache por 5 min (evita requisições repetidas)
+        };
+
+        try {
+            // 4. ✅ PROMISE WRAPPER - Melhor controle de erros
+            const position = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, options);
+            });
+
+            const { latitude, longitude, accuracy } = position.coords;
+
+            // 5. ✅ VALIDAÇÃO DE COORDENADAS
+            if (!this.isValidCoordinate(latitude, longitude)) {
+                throw new Error('Coordenadas inválidas recebidas');
+            }
+
+            // 6. ✅ REMOÇÃO DE MARCADOR ANTERIOR
+            if (this.userLocationMarker) {
+                this.map.removeLayer(this.userLocationMarker);
+            }
+
+            // 7. ✅ MARCADOR PERSONALIZADO mais visível
+            const userIcon = L.divIcon({
+                className: 'user-location-marker',
+                html: `
+                    <div style="
+                        width: 20px; height: 20px; 
+                        background: #3fba99ff; 
+                        border: 3px solid white; 
+                        border-radius: 50%; 
+                        box-shadow: 0 0 0 3px rgba(0,123,255,0.3);
+                        animation: pulse 2s infinite;
+                    "></div>
+                `,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            // 8. ✅ ADICIONAR MARCADOR COM POPUP INFORMATIVO
+            this.userLocationMarker = L.marker([latitude, longitude], { icon: userIcon })
+                .addTo(this.map)
+                .bindPopup(`
+                    <div style="text-align: center;">
+                        <strong>📍 Você está aqui!</strong><br>
+                        <small>Precisão: ≈${Math.round(accuracy)}m</small><br>
+                        <small>Lat: ${latitude.toFixed(6)}</small><br>
+                        <small>Lng: ${longitude.toFixed(6)}</small>
+                    </div>
+                `);
+
+            // 9. ✅ ZOOM INTELIGENTE baseado na precisão
+            const zoom = this.calculateOptimalZoom(accuracy);
+            this.map.setView([latitude, longitude], zoom);
+
+            // 10. ✅ FEEDBACK DETALHADO de sucesso
+            const accuracyText = accuracy < 50 ? 'alta precisão' : accuracy < 200 ? 'boa precisão' : 'precisão aproximada';
+            this.showToast('success', `Localização encontrada com ${accuracyText}! 📍`);
+
+            // 11. ✅ ANALYTICS/LOG (opcional)
+            console.log(`🎯 Localização obtida: ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${Math.round(accuracy)}m)`);
+
+        } catch (error) {
+            // 12. ✅ TRATAMENTO ESPECÍFICO DE ERROS
+            let errorMessage = 'Erro ao obter localização 📍';
+
+            switch (error.code) {
+                case 1: // PERMISSION_DENIED
+                    errorMessage = 'Permissão de localização negada. Verifique as configurações do navegador 🔒';
+                    break;
+                case 2: // POSITION_UNAVAILABLE
+                    errorMessage = 'Localização indisponível. Verifique GPS/Wi-Fi 📡';
+                    break;
+                case 3: // TIMEOUT
+                    errorMessage = 'Timeout na localização. Tente novamente ⏰';
+                    break;
+                default:
+                    errorMessage = `Erro na localização: ${error.message}`;
+            }
+
+            this.showToast('error', errorMessage);
+            console.error('❌ Erro geolocalização:', error);
+
+        } finally {
+            // 13. ✅ RESTORE BUTTON sempre executado
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = '<span>📍</span><span class="btn-text">Minha Localização</span>';
+                button.classList.remove('loading');
+            }
+        }
+    }
+
+    // ✅ MÉTODO AUXILIAR - Validação de coordenadas
+    isValidCoordinate(lat, lng) {
+        return (
+            typeof lat === 'number' && 
+            typeof lng === 'number' &&
+            lat >= -90 && lat <= 90 &&
+            lng >= -180 && lng <= 180 &&
+            !isNaN(lat) && !isNaN(lng)
+        );
+    }
+
+    // ✅ MÉTODO AUXILIAR - Zoom baseado na precisão
+    calculateOptimalZoom(accuracy) {
+        if (accuracy < 20) return 18;      // Muito preciso - zoom máximo
+        if (accuracy < 50) return 17;      // Boa precisão
+        if (accuracy < 100) return 16;     // Precisão média  
+        if (accuracy < 500) return 15;     // Baixa precisão
+        return 14;                         // Muito impreciso
+    }
+
+    // ✅ MÉTODO ADICIONAL - Verificar se localização está próxima da USP
+    isNearUSP(lat, lng) {
+        const uspLat = -23.561;
+        const uspLng = -46.733;
+        const distance = this.calculateDistance(lat, lng, uspLat, uspLng);
+        return distance < 5; // Dentro de 5km da USP
+    }
+
+    // ✅ MÉTODO AUXILIAR - Calcular distância entre pontos
+    calculateDistance(lat1, lng1, lat2, lng2) {
+        const R = 6371; // Raio da Terra em km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
     }
 
     async checkStatus() {
@@ -226,7 +397,7 @@ class BusTracker {
       this.showNotification(`Erro ao carregar linha ${lineCode}: ${error.message}`, 'error');
       return { buses: [], error: error.message };
     }
-  }
+    }
 
     updateBusMarkers(lineCode, buses) {
         // Remove marcadores antigos desta linha
@@ -298,6 +469,11 @@ class BusTracker {
         const lastUpdate = document.getElementById('last-update');
         if (lastUpdate) {
             lastUpdate.textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
+        }
+
+        if (this.activeBusLines.size === 0) {
+            this.showToast('error', 'Selecione pelo menos uma linha para atualizar');
+            return;
         }
 
         this.updateStats();
