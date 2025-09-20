@@ -272,8 +272,8 @@ class BusTracker {
                     <div style="text-align: center;">
                         <strong>📍 Você está aqui!</strong><br>
                         <small>Precisão: ≈${Math.round(accuracy)}m</small><br>
-                        <small>Lat: ${latitude.toFixed(6)}</small><br>
-                        <small>Lng: ${longitude.toFixed(6)}</small>
+                        <small>Lat: ${latitude.toFixed(2)}</small><br>
+                        <small>Lng: ${longitude.toFixed(2)}</small>
                     </div>
                 `);
 
@@ -282,8 +282,8 @@ class BusTracker {
             this.map.setView([latitude, longitude], zoom);
 
             // 10. ✅ FEEDBACK DETALHADO de sucesso
-            const accuracyText = accuracy < 50 ? 'alta precisão' : accuracy < 200 ? 'boa precisão' : 'precisão aproximada';
-            this.showToast('success', `Localização encontrada com ${accuracyText}! 📍`);
+            const accuracyText = accuracy < 50 ? 'Alta precisão' : accuracy < 200 ? 'Boa precisão' : 'Precisão aproximada';
+            this.showToast('success', `Te achei! ${accuracyText}! 📍`);
 
             // 11. ✅ ANALYTICS/LOG (opcional)
             console.log(`🎯 Localização obtida: ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${Math.round(accuracy)}m)`);
@@ -495,16 +495,39 @@ class BusTracker {
         }
     }
 
+    // Toast notifications
     showToast(type, message) {
         const toast = document.getElementById(`${type}-toast`);
         const messageElement = document.getElementById(type === 'error' ? 'toast-message' : 'success-message');
-
         if (toast && messageElement) {
             messageElement.textContent = message;
             toast.classList.remove('hidden');
-            setTimeout(() => toast.classList.add('hidden'), 3000);
+            toast.classList.add('visible');
+            // Auto-hide after 4s
+            clearTimeout(toast._hideTimeout);
+            toast._hideTimeout = setTimeout(() => {
+                this.hideToast(type);
+            }, 3000);
         }
     }
+
+    hideToast(type) {
+        const toast = document.getElementById(`${type}-toast`);
+        if (toast) {
+            toast.classList.remove('visible');
+            toast.classList.add('hidden');
+        }
+    }
+    // showToast(type, message) {
+    //     const toast = document.getElementById(`${type}-toast`);
+    //     const messageElement = document.getElementById(type === 'error' ? 'toast-message' : 'success-message');
+
+    //     if (toast && messageElement) {
+    //         messageElement.textContent = message;
+    //         toast.classList.remove('hidden');
+    //         setTimeout(() => toast.classList.add('hidden'), 3000);
+    //     }
+    // }
 
     hideLoadingOverlay() {
         setTimeout(() => {
