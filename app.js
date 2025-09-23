@@ -317,8 +317,8 @@ class BusTracker {
                     <div style="text-align: center;">
                         <strong>📍 Você está aqui!</strong><br>
                         <small>Precisão: ≈${Math.round(accuracy)}m</small><br>
-                        <small>Lat: ${latitude.toFixed(2)}</small><br>
-                        <small>Lng: ${longitude.toFixed(2)}</small>
+                        <small>Latitude: ${latitude.toFixed(2)}</small><br>
+                        <small>Longitude: ${longitude.toFixed(2)}</small>
                     </div>
                 `);
 
