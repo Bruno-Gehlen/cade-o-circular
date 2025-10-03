@@ -1,10 +1,10 @@
 # 🚌 Cadê o Circular - Monitor Ônibus USP Butantã
 
-> **OlhoGehlenVivo** - Sistema simplificado de monitoramento em tempo real dos ônibus exclusivos da USP Butantã com integração direta à API SPTrans.
+> **''OlhoGehlenVivo''** - Sistema simplificado de monitoramento em tempo real dos ônibus exclusivos da USP Butantã com integração direta à API SPTrans.
 
-![USP Bus Monitor](https://img.shields.io/badge/Status-Ativo-success?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-0.0.5-blue?style=for-the-badge)
-![API](https://img.shields.io/badge/API-SPTrans-orange?style=for-the-badge)
+![USP Bus Monitor](https://img.shields.io/badge/Status-Ativo-success?style=flat)
+![Version](https://img.shields.io/badge/Version-0.1-blue?style=flat)
+![API](https://img.shields.io/badge/API-SPTrans-orange?style=flat)
 
 ## 🎯 Sobre o Projeto
 
@@ -47,14 +47,6 @@ cade-o-circular/
 └── 📖 README.md           # Esta documentação
 ```
 
-### 🎯 **Simplificações Realizadas:**
-- ✅ Reduzido de **10+ arquivos** para apenas **2 arquivos JavaScript essenciais**
-- ✅ Eliminadas **dependências desnecessárias** (concurrently, vite, etc)
-- ✅ **Interface mantida 100%** intacta (HTML/CSS não modificados)
-- ✅ **Uma única classe** `BusTracker` com toda funcionalidade
-- ✅ **Servidor proxy mínimo** que resolve CORS automaticamente
-
-
 ## 🏗️ Arquitetura Técnica
 
 ### **🔧 Backend (proxy.js)**
@@ -69,10 +61,6 @@ cade-o-circular/
 - **Fetch API** para comunicação com backend
 - **Event-driven architecture** responsiva
 
-### **🔗 Fluxo de Dados**
-```
-Frontend (app.js) → Proxy (proxy.js) → API SPTrans → Dados → Mapa
-```
 
 ## 🛠️ Endpoints da API
 
@@ -83,10 +71,6 @@ Frontend (app.js) → Proxy (proxy.js) → API SPTrans → Dados → Mapa
 | `GET` | `/api/lines/search` | Buscar linhas por termo |
 | `POST` | `/api/reauth` | Forçar reautenticação |
 
-**Exemplo:**
-```bash
-curl http://localhost:3000/api/lines/8082-10/positions
-```
 
 ## 🎨 Funcionalidades da Interface
 
@@ -109,29 +93,13 @@ curl http://localhost:3000/api/lines/8082-10/positions
 - **Status da conexão** com API
 - **Timestamp** da última atualização
 
-## 🌟 Diferencial do Projeto
-
-### **🎯 Focado na USP**
-- Exclusivamente para as **6 principais linhas** da USP Butantã
-- Interface otimizada para **estudantes e funcionários**
-- **Conhecimento local** das rotas e paradas
-
-### **⚡ Performance**
-- **Código mínimo** (330 linhas totais vs 800+ anterior)
-- **Dependências essenciais** (4 vs 10+ anterior)
-- **Carregamento rápido** e responsivo
-
-### **🔧 Manutenabilidade**
-- **Arquitetura simples** (2 arquivos JS principais)
-- **Logs detalhados** para debugging
-- **Configuração via variáveis** de ambiente
 
 ## 📈 Próximas Melhorias
 
 - [ ] **Previsão de chegada** nos pontos
 - [ ] **Rotas no mapa** (trajetos das linhas)
 - [ ] **Notificações push** quando ônibus se aproxima
-- [ ] **Histórico** de posições
+- [ ] **.Histórico** de posições
 - [ ] **API pública** para outros desenvolvedores USP
 
 ## 📝 Tecnologias Utilizadas
@@ -148,31 +116,7 @@ curl http://localhost:3000/api/lines/8082-10/positions
 
 **MIT License** - veja [LICENSE.md](LICENSE.md) para detalhes completos.
 
-## 👤 Desenvolvedor
 
-**Bruno Gehlen**
-- 📧 Email: brunogfdsilva@gmail.com
-- 🐙 GitHub: [@Bruno-Gehlen](https://github.com/Bruno-Gehlen)
-- 🎓 Estudante: Matemática (Mestrado), USP
-
-## 🤝 Contribuições
-
-Contribuições são bem-vindas! Sinta-se à vontade para:
-
-1. **Fork** o projeto
-2. **Crie** uma branch para sua feature (`git checkout -b feature/nova-feature`)
-3. **Commit** suas mudanças (`git commit -m 'Adiciona nova feature'`)
-4. **Push** para a branch (`git push origin feature/nova-feature`)
-5. **Abra** um Pull Request
-
-## 🙏 Agradecimentos
-
-- **SPTrans** pela API Olho Vivo
-- **USP** pela infraestrutura de transporte
-- **Comunidade USP** pelo feedback e sugestões
-- **OpenStreetMap** pelos dados cartográficos
-
----
 
 ## 📊 Status do Projeto
 

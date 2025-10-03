@@ -109,7 +109,7 @@ app.get('/api/lines/:code/positions', ensureAuthenticated, async (req, res) => {
     }
 
     const lines = await lineResponse.json();
-    console.log(`📋 Linhas encontradas: ${lines.length}`);
+    console.log(`📋 Linhas encontradas: ${Array.isArray(lines) ? lines.length : 0}`);
 
     if (!lines || lines.length === 0) {
       return res.json({ 
@@ -119,12 +119,20 @@ app.get('/api/lines/:code/positions', ensureAuthenticated, async (req, res) => {
       });
     }
 
-    // Pega a primeira linha que corresponde
-    const targetLine = lines.find(line => line.letreiro && line.letreiro.includes(code)) || lines[0];
-    console.log(`🎯 Linha selecionada: ${targetLine.letreiro} (ID: ${targetLine.cl})`);
+    // Pega a primeira linha que corresponde (tenta diferentes nomes retornados pela API)
+    const targetLine = lines.find(line => {
+      const display = (line.letreiro || line.lt || line.Letreiro || line.tp || line.c || '').toString();
+      return display.includes(code);
+    }) || lines[0];
+
+    const lineId = targetLine.cl || targetLine.CodigoLinha || targetLine.cl || targetLine.cl;
+    const lineName = targetLine.letreiro || targetLine.lt || targetLine.Letreiro || targetLine.tp || targetLine.c || '';
+    const lineDirection = targetLine.sentido || targetLine.Sentido || targetLine.sl || null;
+
+    console.log(`🎯 Linha selecionada: ${lineName} (ID: ${lineId})`);
 
     // Busca as posições dos ônibus desta linha
-    const positionResponse = await fetch(`${SPTRANS_BASE_URL}/Posicao/Linha?codigoLinha=${targetLine.cl}`, {
+    const positionResponse = await fetch(`${SPTRANS_BASE_URL}/Posicao/Linha?codigoLinha=${lineId}`, {
       headers: {
         'Cookie': authCookies
       }
@@ -135,17 +143,24 @@ app.get('/api/lines/:code/positions', ensureAuthenticated, async (req, res) => {
     }
 
     const positionData = await positionResponse.json();
-    
-    // Extrai os ônibus se existirem
-    const buses = positionData.l && positionData.l.length > 0 && positionData.l[0].vs 
-      ? positionData.l[0].vs.map(bus => ({
-          id: bus.p,
-          lat: bus.py,
-          lng: bus.px,
-          direction: bus.a || 0,
-          timestamp: bus.ta || new Date().toISOString()
-        }))
-      : [];
+
+    // A API pode retornar vs no root (Posicao/Linha) ou um objeto l[] com vs (em outros endpoints)
+    let vehicles = [];
+    if (Array.isArray(positionData.vs)) {
+      vehicles = positionData.vs;
+    } else if (Array.isArray(positionData.l) && positionData.l.length > 0 && Array.isArray(positionData.l[0].vs)) {
+      vehicles = positionData.l[0].vs;
+    }
+
+    // Normaliza os veículos para manter as chaves usadas pela API original (p, py, px, a, ta)
+    const buses = vehicles.map(bus => ({
+      p: bus.p || bus.Prefixo || bus.prefixo,
+      py: bus.py || bus.py || bus.py === 0 ? bus.py : (bus.py || bus.py),
+      px: bus.px || bus.px || bus.px === 0 ? bus.px : (bus.px || bus.px),
+      a: typeof bus.a !== 'undefined' ? bus.a : (bus.a || false),
+      ta: bus.ta || bus.Ta || bus.ta || null,
+      raw: bus
+    }));
 
     console.log(`🚌 Ônibus encontrados: ${buses.length}`);
 
@@ -153,9 +168,9 @@ app.get('/api/lines/:code/positions', ensureAuthenticated, async (req, res) => {
       success: true,
       lineCode: code,
       lineInfo: {
-        id: targetLine.cl,
-        name: targetLine.letreiro,
-        direction: targetLine.sentido
+        id: lineId,
+        name: lineName,
+        direction: lineDirection
       },
       buses: buses,
       timestamp: new Date().toISOString()
