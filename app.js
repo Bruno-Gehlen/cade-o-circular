@@ -92,6 +92,7 @@ class BusTracker {
         });
         this.map.on('moveend', () => {
             document.querySelector('.top-controls')?.classList.remove('collapsed');
+            document.querySelector('.bottom-panel')?.classList.remove('collapsed');
         });
 
         // ⬇️ Drag handle para abrir a sidebar
