@@ -1126,7 +1126,7 @@ body {
 
 .panel-content {
     padding: var(--space-16);
-    max-height: 140px;
+    max-height: 150px;
     overflow-y: auto;
 }
 
