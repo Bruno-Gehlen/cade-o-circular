@@ -1,4 +1,6 @@
 import { isValidCoordinate, calculateOptimalZoom, calculateDistance, formatTimeLocale } from './utils.js';
+import { markerIconHtml, busPopupHtml, renderBusLineItemHtml, userLocationMarkerHtml, userLocationPopupHtml } from './uiHelpers.js';
+import MapManager from './mapManager.js';
 
 export default class BusTracker {
   constructor(options = {}) {
@@ -10,8 +12,8 @@ export default class BusTracker {
 
     this.busLines = options.busLines || [];
     this.uspLocation = options.uspLocation || { lat: -23.561, lng: -46.733 };
-    this.map = null;
-    this.busMarkers = new Map();
+  this.map = null;
+  this.mapManager = new MapManager();
     this.activeBusLines = new Set();
     this.authenticated = false;
     this.userLocationMarker = null;
@@ -34,16 +36,9 @@ export default class BusTracker {
 
   setupMap() {
     const self = this;
-    this.map = L.map('map', {
-      center: [this.uspLocation.lat, this.uspLocation.lng],
-      zoom: 15
-    });
+    this.mapManager.init('map', [this.uspLocation.lat, this.uspLocation.lng], 15);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(this.map);
-
-    this.map.on('movestart', () => {
+    this.mapManager.on('movestart', () => {
       // Save current UI states once, then collapse top-controls, sidebar and bottom-panel while moving
       if (!this._savedUIState) {
         const topEl = document.querySelector('.top-controls');
@@ -61,7 +56,7 @@ export default class BusTracker {
       document.getElementById('bottom-panel')?.classList.add('collapsed');
     });
 
-    this.map.on('moveend', () => {
+    this.mapManager.on('moveend', () => {
       // Restore previously saved UI states after moving the map
       const topEl = document.querySelector('.top-controls');
       const sidebarEl = document.getElementById('sidebar');
@@ -135,16 +130,7 @@ export default class BusTracker {
     this.busLines.forEach(line => {
       const lineItem = document.createElement('div');
       lineItem.className = 'bus-line-item';
-      lineItem.innerHTML = `
-                <label class="bus-line-checkbox">
-                    <input type="checkbox" data-line="${line.code}">
-                </label>
-                <div class="bus-line-info">
-                    <div class="bus-line-code">${line.code}</div>
-                    <div class="bus-line-name">${line.name}</div>
-                </div>
-                <div class="line-color-indicator" style="background-color: ${line.color}"></div>
-            `;
+      lineItem.innerHTML = renderBusLineItemHtml(line);
       container.appendChild(lineItem);
     });
   }
@@ -168,7 +154,7 @@ export default class BusTracker {
     });
 
     document.getElementById('center-usp')?.addEventListener('click', () => {
-      this.map.setView([this.uspLocation.lat, this.uspLocation.lng], 15);
+      this.mapManager.setView([this.uspLocation.lat, this.uspLocation.lng], 15);
       this.showToast('success', 'Centralizado na USP Butantã! 🎓');
     });
 
@@ -245,21 +231,17 @@ export default class BusTracker {
         throw new Error('Coordenadas inválidas recebidas');
       }
 
-      if (this.userLocationMarker) this.map.removeLayer(this.userLocationMarker);
+      if (this.userLocationMarker) this.mapManager.removeMarker('user-location');
 
-      const userIcon = L.divIcon({
-        className: 'user-location-marker',
-        html: `<div style="width: 20px; height: 20px; background: #3fba99ff; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 0 3px rgba(0,123,255,0.3); animation: pulse 2s infinite;"></div>`,
+      this.userLocationMarker = this.mapManager.addMarker('user-location', latitude, longitude, {
+        iconHtml: userLocationMarkerHtml(),
         iconSize: [20, 20],
-        iconAnchor: [10, 10]
+        iconAnchor: [10, 10],
+        popupHtml: userLocationPopupHtml(latitude, longitude, accuracy)
       });
 
-      this.userLocationMarker = L.marker([latitude, longitude], { icon: userIcon })
-        .addTo(this.map)
-        .bindPopup(`<div style="text-align: center;"><strong>📍 Você está aqui!</strong><br><small>Precisão: ≈${Math.round(accuracy)}m</small><br><small>Latitude: ${latitude.toFixed(2)}</small><br><small>Longitude: ${longitude.toFixed(2)}</small></div>`);
-
       const zoom = calculateOptimalZoom(accuracy);
-      this.map.setView([latitude, longitude], zoom);
+      this.mapManager.setView([latitude, longitude], zoom);
 
       const accuracyText = accuracy < 50 ? 'Alta precisão' : accuracy < 200 ? 'Boa precisão' : 'Precisão aproximada';
       this.showToast('success', `Te achei! ${accuracyText}! 📍`);
@@ -336,13 +318,8 @@ export default class BusTracker {
   }
 
   updateBusMarkers(lineCode, buses) {
-    // Remove old markers for this line
-    this.busMarkers.forEach((marker, key) => {
-      if (key.startsWith(lineCode + '-')) {
-        try { this.map.removeLayer(marker); } catch (e) {}
-        this.busMarkers.delete(key);
-      }
-    });
+    // Remove old markers for this line via mapManager
+    this.mapManager.removeMarkersByPrefix(lineCode + '-');
 
     const lineConfig = this.busLines.find(line => line.code === lineCode);
     if (!lineConfig) return;
@@ -352,17 +329,11 @@ export default class BusTracker {
       const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
       const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
 
-      const markerIcon = L.divIcon({
-        className: 'bus-marker',
-        html: `<div style="background-color: ${lineConfig.color}; color: black; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid black; box-shadow: 0 2px 4px rgba(255,255,255,0.5); ${compensateFilter}">${lineCode.split('-')[0].slice(-2)}</div>`,
-        iconSize: [24, 24]
+      this.mapManager.addMarker(markerId, bus.py, bus.px, {
+        iconHtml: `<div class=\"bus-marker\">${markerIconHtml(lineConfig, lineCode, compensateFilter)}</div>`,
+        iconSize: [24, 24],
+        popupHtml: busPopupHtml(lineConfig, lineCode, bus, compensateFilter)
       });
-
-      const marker = L.marker([bus.py, bus.px], { icon: markerIcon })
-        .bindPopup(`<div style="text-align: center; max-width: 90px"><h5 style="color: ${lineConfig.color}; ${compensateFilter}">${lineConfig.name}</h5><p><strong>Linha:</strong> ${lineCode}</p><p><strong>Prefixo:</strong> ${bus.p}</p>${bus.hr ? `<p><strong>Horário:</strong> ${bus.hr}</p>` : ''}</div>`)
-        .addTo(this.map);
-
-      this.busMarkers.set(markerId, marker);
     });
   }
 
@@ -372,12 +343,8 @@ export default class BusTracker {
       this.fetchBusPositions(lineCode);
     } else {
       this.activeBusLines.delete(lineCode);
-      this.busMarkers.forEach((marker, key) => {
-        if (key.startsWith(lineCode + '-')) {
-          try { this.map.removeLayer(marker); } catch (e) {}
-          this.busMarkers.delete(key);
-        }
-      });
+      // remove markers for this line via mapManager
+      this.mapManager.removeMarkersByPrefix(lineCode + '-');
     }
     this.updateStats();
   }
@@ -410,7 +377,7 @@ export default class BusTracker {
     const totalBuses = document.getElementById('total-buses');
 
     if (activeLines) activeLines.textContent = this.activeBusLines.size;
-    if (totalBuses) totalBuses.textContent = this.busMarkers.size;
+    if (totalBuses) totalBuses.textContent = this.mapManager?.markers.size || 0;
   }
 
   // Ensure sidebar and bottom-panel are mutually exclusive.
@@ -438,6 +405,8 @@ export default class BusTracker {
       if (collapsed) sidebarEl.classList.remove('collapsed'); else sidebarEl.classList.add('collapsed');
     }
   }
+
+  
 
   updateConnectionStatus(status, message) {
     const statusElement = document.getElementById('connection-status');

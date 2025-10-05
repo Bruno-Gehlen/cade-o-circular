@@ -1017,29 +1017,6 @@ body {
     height: 100%;
 }
 
-/* Custom Leaflet styles */
-/* .leaflet-control-container .leaflet-top.leaflet-right {
-    top: 80px;
-    right: var(--space-16);
-}
-
-.leaflet-control-zoom {
-    border: 1px solid var(--color-border) !important;
-    border-radius: var(--radius-base) !important;
-    box-shadow: var(--shadow-md) !important;
-}
-
-.leaflet-control-zoom a {
-    background-color: var(--color-surface) !important;
-    color: var(--color-text) !important;
-    border: none !important;
-    transition: background-color var(--duration-fast) var(--ease-standard);
-}
-
-.leaflet-control-zoom a:hover {
-    background-color: var(--color-secondary) !important;
-} */
-
 /* Bus Markers */
 .bus-marker {
     width: 24px;
@@ -1056,6 +1033,44 @@ body {
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
+.bus-marker-inner {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: black;
+  border: 2px solid black;
+  box-shadow: 0 2px 4px rgba(255,255,255,0.5);
+}
+
+.bus-popup .bus-popup-title {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+}
+
+.bus-popup {
+  text-align: center;
+  max-width: 90px;
+}
+
+.user-location-popup {
+  text-align: center;
+}
+
+#status-text,
+#arrival-time {
+  font-size: 14px;
+  color: var(--color-primary);
+}
+
+.selected-bus-info {
+  display: none;
+}
+
 .user-marker {
     width: 16px;
     height: 16px;
@@ -1063,6 +1078,20 @@ body {
     border: 3px solid #fff;
     border-radius: 50%;
     box-shadow: var(--shadow-lg);
+}
+
+.user-location-marker {
+  z-index: 1000;
+}
+
+.user-location-inner {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 3px rgba(0,123,255,0.3);
+  background: #3fba99ff;
+  animation: pulse 2s infinite;
 }
 
 /* Bottom Panel */
@@ -1254,11 +1283,6 @@ body {
         box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
     }
 }
-
-.user-location-marker {
-    z-index: 1000;
-}
-
 #find-location.loading {
     opacity: 0.7;
     pointer-events: none;
@@ -1350,6 +1374,13 @@ body {
     .control-btn .btn-text {
         display: inline;
     }
+}
+
+/* Custom Leaflet styles */
+.leaflet-div-icon {
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
 /* Dark mode specific adjustments */

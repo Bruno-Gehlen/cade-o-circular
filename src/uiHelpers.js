@@ -1,0 +1,33 @@
+// UI helper functions for rendering HTML snippets used by BusTracker
+export function markerIconHtml(lineConfig, lineCode, compensateFilter = '') {
+  const shortCode = lineCode.split('-')[0].slice(-2);
+  // inner element carries the per-line background color; outer has general marker styles
+  return `<div class="bus-marker-inner" style="background-color: ${lineConfig.color}; ${compensateFilter}">${shortCode}</div>`;
+}
+
+export function busPopupHtml(lineConfig, lineCode, bus, compensateFilter = '') {
+  const timeHtml = bus.hr ? `<p><strong>Horário:</strong> ${bus.hr}</p>` : '';
+  // keep the title colored per-line via inline style (single property)
+  return `<div class="bus-popup"><h5 class="bus-popup-title" style="color: ${lineConfig.color}; ${compensateFilter}">${lineConfig.name}</h5><p><strong>Linha:</strong> ${lineCode}</p><p><strong>Prefixo:</strong> ${bus.p}</p>${timeHtml}</div>`;
+}
+
+export function renderBusLineItemHtml(line) {
+  return `
+        <label class="bus-line-checkbox">
+          <input type="checkbox" data-line="${line.code}">
+        </label>
+        <div class="bus-line-info">
+          <div class="bus-line-code">${line.code}</div>
+          <div class="bus-line-name">${line.name}</div>
+        </div>
+        <div class="line-color-indicator" style="background-color: ${line.color}"></div>
+      `;
+}
+
+export function userLocationMarkerHtml() {
+  return `<div class="user-location-inner"></div>`;
+}
+
+export function userLocationPopupHtml(lat, lng, accuracy) {
+  return `<div class="user-location-popup"><strong>📍 Você está aqui!</strong><br><small>Precisão: ≈${Math.round(accuracy)}m</small><br><small>Latitude: ${lat.toFixed(2)}</small><br><small>Longitude: ${lng.toFixed(2)}</small></div>`;
+}
