@@ -319,7 +319,7 @@ export default class BusTracker {
 
       const markerIcon = L.divIcon({
         className: 'bus-marker',
-        html: `<div style="background-color: ${lineConfig.color}; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); ${compensateFilter}">${lineCode.split('-')[0].slice(-2)}</div>`,
+        html: `<div style="background-color: ${lineConfig.color}; color: black; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); ${compensateFilter}">${lineCode.split('-')[0].slice(-2)}</div>`,
         iconSize: [24, 24]
       });
 

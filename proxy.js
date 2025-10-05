@@ -225,7 +225,7 @@ async function startServer() {
       console.log(`🚀 Servidor iniciado com sucesso!`);
       console.log(`🌐 Acesse: http://localhost:${PORT}`);
       console.log(`📊 Status: http://localhost:${PORT}/api/status`);
-      console.log(`🚌 Exemplo: http://localhost:${PORT}/api/lines/8082-10/positions`);
+      console.log(`🚌 Exemplo: http://localhost:${PORT}/api/lines/8082/positions`);
     });
   } catch (error) {
     console.error('❌ Erro ao iniciar servidor:', error);
