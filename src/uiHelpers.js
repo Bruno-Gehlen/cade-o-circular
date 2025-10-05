@@ -31,3 +31,10 @@ export function userLocationMarkerHtml() {
 export function userLocationPopupHtml(lat, lng, accuracy) {
   return `<div class="user-location-popup"><strong>📍 Você está aqui!</strong><br><small>Precisão: ≈${Math.round(accuracy)}m</small><br><small>Latitude: ${lat.toFixed(2)}</small><br><small>Longitude: ${lng.toFixed(2)}</small></div>`;
 }
+
+export function stopMarkerHtml(stop, lineColor) {
+  // small dot with optional tooltip color
+  const color = lineColor || '#333';
+  const name = (stop && stop.name) ? stop.name : '';
+  return `<div class="stop-marker-outer"><div class="stop-marker-inner" style="background:${color};border:2px solid #fff;border-radius:50%;width:10px;height:10px;box-shadow:0 0 2px rgba(0,0,0,0.4)"></div></div><div class="stop-marker-popup">${name}</div>`;
+}

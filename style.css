@@ -411,6 +411,15 @@ pre code {
   position: relative;
 }
 
+/* Stop marker styles for map */
+.stop-marker-outer { display: flex; align-items: center; justify-content: center; }
+.stop-marker-inner { display: inline-block; }
+.stop-marker-popup { display: none; }
+
+/* Leaflet will use marker.bindPopup content; ensure small popups look ok */
+.leaflet-popup-content .stop-marker-popup { display: block; }
+
+
 .btn:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);

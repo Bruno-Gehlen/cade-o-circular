@@ -1,6 +1,7 @@
 import { isValidCoordinate, calculateOptimalZoom, calculateDistance, formatTimeLocale } from './utils.js';
-import { markerIconHtml, busPopupHtml, renderBusLineItemHtml, userLocationMarkerHtml, userLocationPopupHtml } from './uiHelpers.js';
+import { markerIconHtml, busPopupHtml, renderBusLineItemHtml, userLocationMarkerHtml, userLocationPopupHtml, stopMarkerHtml } from './uiHelpers.js';
 import MapManager from './mapManager.js';
+import { stopCoords, lineStops } from './stopsData.js';
 
 export default class BusTracker {
   constructor(options = {}) {
@@ -318,14 +319,14 @@ export default class BusTracker {
   }
 
   updateBusMarkers(lineCode, buses) {
-    // Remove old markers for this line via mapManager
-    this.mapManager.removeMarkersByPrefix(lineCode + '-');
+    // Remove old bus markers for this line via mapManager (keep stop markers)
+    this.mapManager.removeMarkersByPrefix(`${lineCode}-bus-`);
 
     const lineConfig = this.busLines.find(line => line.code === lineCode);
     if (!lineConfig) return;
 
     buses.forEach(bus => {
-      const markerId = `${lineCode}-${bus.p}`;
+  const markerId = `${lineCode}-bus-${bus.p}`;
       const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
       const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
 
@@ -337,14 +338,34 @@ export default class BusTracker {
     });
   }
 
+  addStopMarkers(lineCode) {
+    const lineConfig = this.busLines.find(line => line.code === lineCode);
+    if (!lineConfig) return;
+    const stopsForLine = lineStops[lineCode] || [];
+
+    stopsForLine.forEach(stopId => {
+      const stop = stopCoords[stopId];
+      if (!stop || !isFinite(stop.lat) || !isFinite(stop.lon)) return;
+      const markerId = `${lineCode}-stop-${stopId}`;
+      this.mapManager.addMarker(markerId, stop.lat, stop.lon, {
+        iconHtml: stopMarkerHtml(stop, lineConfig.color),
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+        popupHtml: `<div class=\"stop-popup\"><strong>${stop.name}</strong><br><small>ID: ${stopId}</small></div>`
+      });
+    });
+  }
+
   toggleBusLine(lineCode, isActive) {
     if (isActive) {
       this.activeBusLines.add(lineCode);
       this.fetchBusPositions(lineCode);
+      // add stops for this line
+      try { this.addStopMarkers(lineCode); } catch (e) { console.error('Erro ao adicionar paradas:', e); }
     } else {
       this.activeBusLines.delete(lineCode);
       // remove markers for this line via mapManager
-      this.mapManager.removeMarkersByPrefix(lineCode + '-');
+      this.mapManager.removeMarkersByPrefix(`${lineCode}-`);
     }
     this.updateStats();
   }
