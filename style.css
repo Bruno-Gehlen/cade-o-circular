@@ -897,7 +897,7 @@ body {
   position: absolute;
   top: 120px;
   left: 0;
-  width: 10px;  /* Área ‘tocável’/‘clicável’ com touch ou mouse */
+  width: 20px;  /* Área ‘tocável’/‘clicável’ com touch ou mouse */
   height: calc(100vh - 180px);
   z-index: 10001;
   cursor: ew-resize;
@@ -1284,7 +1284,7 @@ body {
     }
     
     .sidebar.collapsed {
-        transform: translateX(-95%);
+        transform: translateX(-90%);
     }
     
     .sidebar:not(.collapsed) {

@@ -15,6 +15,7 @@ export default class BusTracker {
     this.activeBusLines = new Set();
     this.authenticated = false;
     this.userLocationMarker = null;
+  this._savedUIState = null; // used to save/restore UI collapsed states during map interactions
 
     this.init();
   }
@@ -24,12 +25,15 @@ export default class BusTracker {
     this.setupUI();
     this.renderBusLines();
     this.bindEvents();
+    // Ensure panels are mutually exclusive: when sidebar is expanded, bottom-panel is collapsed and vice-versa
+    this.setSidebarCollapsed(false);
     this.checkStatus();
     this.hideLoadingOverlay();
     this.startAutoUpdate();
   }
 
   setupMap() {
+    const self = this;
     this.map = L.map('map', {
       center: [this.uspLocation.lat, this.uspLocation.lng],
       zoom: 15
@@ -40,13 +44,39 @@ export default class BusTracker {
     }).addTo(this.map);
 
     this.map.on('movestart', () => {
+      // Save current UI states once, then collapse top-controls, sidebar and bottom-panel while moving
+      if (!this._savedUIState) {
+        const topEl = document.querySelector('.top-controls');
+        const sidebarEl = document.getElementById('sidebar');
+        const panelEl = document.getElementById('bottom-panel');
+        this._savedUIState = {
+          topCollapsed: topEl?.classList.contains('collapsed') || false,
+          sidebarCollapsed: sidebarEl?.classList.contains('collapsed') || false,
+          panelCollapsed: panelEl?.classList.contains('collapsed') || false
+        };
+      }
+
+      document.querySelector('.top-controls')?.classList.add('collapsed');
       document.getElementById('sidebar')?.classList.add('collapsed');
       document.getElementById('bottom-panel')?.classList.add('collapsed');
-      document.querySelector('.top-controls')?.classList.add('collapsed');
     });
+
     this.map.on('moveend', () => {
-      document.querySelector('.top-controls')?.classList.remove('collapsed');
-      document.querySelector('.bottom-panel')?.classList.remove('collapsed');
+      // Restore previously saved UI states after moving the map
+      const topEl = document.querySelector('.top-controls');
+      const sidebarEl = document.getElementById('sidebar');
+      const panelEl = document.getElementById('bottom-panel');
+
+      if (this._savedUIState) {
+        if (this._savedUIState.topCollapsed) topEl?.classList.add('collapsed'); else topEl?.classList.remove('collapsed');
+        if (this._savedUIState.sidebarCollapsed) sidebarEl?.classList.add('collapsed'); else sidebarEl?.classList.remove('collapsed');
+        if (this._savedUIState.panelCollapsed) panelEl?.classList.add('collapsed'); else panelEl?.classList.remove('collapsed');
+        this._savedUIState = null;
+      } else {
+        // Fallback: ensure top-controls visible and keep mutually-exclusive default
+        topEl?.classList.remove('collapsed');
+        this.setSidebarCollapsed(true);
+      }
     });
 
     // Sidebar drag handle
@@ -64,7 +94,8 @@ export default class BusTracker {
       if (!dragging) return;
       const currentX = e.touches ? e.touches[0].clientX : e.clientX;
       if ((currentX - dragStartX) > 40) {
-        sidebar.classList.remove('collapsed');
+        // Expand sidebar and collapse bottom-panel
+        self.setSidebarCollapsed(false);
         const toggleBtn = document.getElementById('sidebar-toggle');
         if (toggleBtn) toggleBtn.focus();
         dragging = false;
@@ -142,11 +173,19 @@ export default class BusTracker {
     });
 
     document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
-      document.getElementById('sidebar')?.classList.toggle('collapsed');
+      // Toggle sidebar and keep bottom-panel opposite
+      const sidebarEl = document.getElementById('sidebar');
+      if (!sidebarEl) return;
+      const willCollapse = !sidebarEl.classList.contains('collapsed');
+      this.setSidebarCollapsed(willCollapse);
     });
 
     document.getElementById('panel-toggle')?.addEventListener('click', () => {
-      document.getElementById('bottom-panel')?.classList.toggle('collapsed');
+      // Toggle bottom-panel and keep sidebar opposite
+      const panelEl = document.getElementById('bottom-panel');
+      if (!panelEl) return;
+      const willCollapse = !panelEl.classList.contains('collapsed');
+      this.setBottomPanelCollapsed(willCollapse);
     });
 
     document.getElementById('select-all-btn')?.addEventListener('click', () => {
@@ -310,21 +349,17 @@ export default class BusTracker {
 
     buses.forEach(bus => {
       const markerId = `${lineCode}-${bus.p}`;
-      // If the app is in dark mode, Leaflet's parent container may have a
-      // `filter: hue-rotate(180deg)` applied. To compensate and keep the
-      // marker colors correct, apply the same hue-rotate on the marker itself
-      // (two rotations cancel out: 180deg + 180deg = 360deg => original colors).
       const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
       const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
 
       const markerIcon = L.divIcon({
         className: 'bus-marker',
-        html: `<div style="background-color: ${lineConfig.color}; color: black; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); ${compensateFilter}">${lineCode.split('-')[0].slice(-2)}</div>`,
+        html: `<div style="background-color: ${lineConfig.color}; color: black; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid black; box-shadow: 0 2px 4px rgba(255,255,255,0.5); ${compensateFilter}">${lineCode.split('-')[0].slice(-2)}</div>`,
         iconSize: [24, 24]
       });
 
       const marker = L.marker([bus.py, bus.px], { icon: markerIcon })
-        .bindPopup(`<div style="text-align: center; max-width: 90px"><h5 style="color: ${lineConfig.color};">${lineConfig.name}</h5><p><strong>Linha:</strong> ${lineCode}</p><p><strong>Prefixo:</strong> ${bus.p}</p>${bus.hr ? `<p><strong>Horário:</strong> ${bus.hr}</p>` : ''}</div>`)
+        .bindPopup(`<div style="text-align: center; max-width: 90px"><h5 style="color: ${lineConfig.color}; ${compensateFilter}">${lineConfig.name}</h5><p><strong>Linha:</strong> ${lineCode}</p><p><strong>Prefixo:</strong> ${bus.p}</p>${bus.hr ? `<p><strong>Horário:</strong> ${bus.hr}</p>` : ''}</div>`)
         .addTo(this.map);
 
       this.busMarkers.set(markerId, marker);
@@ -376,6 +411,32 @@ export default class BusTracker {
 
     if (activeLines) activeLines.textContent = this.activeBusLines.size;
     if (totalBuses) totalBuses.textContent = this.busMarkers.size;
+  }
+
+  // Ensure sidebar and bottom-panel are mutually exclusive.
+  // When sidebar is collapsed = true -> bottom-panel should be expanded (not collapsed), and vice-versa.
+  setSidebarCollapsed(collapsed) {
+    const sidebarEl = document.getElementById('sidebar');
+    const panelEl = document.getElementById('bottom-panel');
+    if (sidebarEl) {
+      if (collapsed) sidebarEl.classList.add('collapsed'); else sidebarEl.classList.remove('collapsed');
+    }
+    if (panelEl) {
+      // bottom-panel should be opposite of sidebar
+      if (collapsed) panelEl.classList.remove('collapsed'); else panelEl.classList.add('collapsed');
+    }
+  }
+
+  setBottomPanelCollapsed(collapsed) {
+    const sidebarEl = document.getElementById('sidebar');
+    const panelEl = document.getElementById('bottom-panel');
+    if (panelEl) {
+      if (collapsed) panelEl.classList.add('collapsed'); else panelEl.classList.remove('collapsed');
+    }
+    if (sidebarEl) {
+      // sidebar should be opposite of bottom-panel
+      if (collapsed) sidebarEl.classList.remove('collapsed'); else sidebarEl.classList.add('collapsed');
+    }
   }
 
   updateConnectionStatus(status, message) {
