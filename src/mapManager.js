@@ -2,6 +2,8 @@ export default class MapManager {
   constructor() {
     this.map = null;
     this.markers = new Map();
+    // store polylines separately
+    this.polylines = new Map();
   }
 
   init(containerId, center = [0,0], zoom = 13) {
@@ -52,6 +54,45 @@ export default class MapManager {
         this.markers.delete(key);
       }
     }
+  }
+
+  addPolyline(id, latlngs = [], options = {}) {
+    if (!this.map) return null;
+    // Remove existing polyline with same id
+    this.removePolyline(id);
+    try {
+      const poly = L.polyline(latlngs, options).addTo(this.map);
+      this.polylines.set(id, poly);
+      return poly;
+    } catch (e) {
+      console.error('Erro ao adicionar polyline:', e);
+      return null;
+    }
+  }
+
+  removePolyline(id) {
+    const poly = this.polylines.get(id);
+    if (!poly || !this.map) return;
+    try { this.map.removeLayer(poly); } catch (e) {}
+    this.polylines.delete(id);
+  }
+
+  removePolylinesByPrefix(prefix) {
+    if (!this.map) return;
+    for (const [key, poly] of Array.from(this.polylines.entries())) {
+      if (key.startsWith(prefix)) {
+        try { this.map.removeLayer(poly); } catch (e) {}
+        this.polylines.delete(key);
+      }
+    }
+  }
+
+  clearPolylines() {
+    if (!this.map) return;
+    for (const poly of this.polylines.values()) {
+      try { this.map.removeLayer(poly); } catch (e) {}
+    }
+    this.polylines.clear();
   }
 
   clearMarkers() {
