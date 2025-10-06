@@ -2,6 +2,8 @@ import { isValidCoordinate, calculateOptimalZoom, calculateDistance, formatTimeL
 import { markerIconHtml, busPopupHtml, renderBusLineItemHtml, userLocationMarkerHtml, userLocationPopupHtml, stopMarkerHtml } from './uiHelpers.js';
 import MapManager from './mapManager.js';
 import { stopCoords, lineStops } from './stopsData.js';
+import shapesData from './shapesData.js';
+import routeShapes from './routeShapes.js';
 
 export default class BusTracker {
   constructor(options = {}) {
@@ -17,7 +19,8 @@ export default class BusTracker {
   this.mapManager = new MapManager();
   this.activeBusLines = new Set();
   this.shapeCache = new Map(); // shape_id => [[lat,lng], ...]
-  this._shapesLoaded = false;
+  // Initialize shapeCache from imported shapesData
+  Object.keys(shapesData || {}).forEach(k => this.shapeCache.set(k, shapesData[k]));
     this.authenticated = false;
     this.userLocationMarker = null;
   this._savedUIState = null; // used to save/restore UI collapsed states during map interactions
@@ -359,111 +362,40 @@ export default class BusTracker {
   }
 
   toggleBusLine(lineCode, isActive) {
-    // make toggle async-friendly; draw shapes when enabling a line
-    (async () => {
-      if (isActive) {
-        this.activeBusLines.add(lineCode);
-        this.fetchBusPositions(lineCode);
-        // add stops for this line
-        try { this.addStopMarkers(lineCode); } catch (e) { console.error('Erro ao adicionar paradas:', e); }
+    if (isActive) {
+      this.activeBusLines.add(lineCode);
+      this.fetchBusPositions(lineCode);
+      // add stops for this line
+      try { this.addStopMarkers(lineCode); } catch (e) { console.error('Erro ao adicionar paradas:', e); }
 
-        try {
-          await this.loadShapesIfNeeded();
-
-          // Try to find shape ids related to this line
-          const matchingShapeIds = [];
-          // Heuristic: shape ids may appear that start with or include the line code
-          for (const sid of this.shapeCache.keys()) {
-            if (!sid) continue;
-            if (sid.startsWith(lineCode) || sid.includes(lineCode)) matchingShapeIds.push(sid);
-          }
-
-          // fallback: read IDsCirculares.txt to map route->shape
-          if (matchingShapeIds.length === 0) {
-            try {
-              const resp = await fetch('/IDsCirculares.txt');
-              if (resp.ok) {
-                const text = await resp.text();
-                const rows = text.split(/\r?\n/).filter(Boolean);
-                for (let i = 1; i < rows.length; i++) {
-                  const row = rows[i].replace(/"/g, '');
-                  const parts = row.split(',');
-                  const route = parts[0];
-                  const shapeId = parts[5];
-                  if (route && route.startsWith(lineCode) && shapeId && this.shapeCache.has(shapeId)) {
-                    matchingShapeIds.push(shapeId);
-                  }
-                }
-              }
-            } catch (e) { /* ignore */ }
-          }
-
-          // draw each matching shape
-          matchingShapeIds.forEach((sid, idx) => {
-            const latlngs = this.shapeCache.get(sid);
-            if (!latlngs || latlngs.length === 0) return;
-            const lineConfig = this.busLines.find(l => l.code === lineCode) || { color: '#3388ff' };
-            const polyId = `${lineCode}-shape-${sid}-${idx}`;
-            this.mapManager.addPolyline(polyId, latlngs, { color: lineConfig.color || '#3388ff', weight: 4, opacity: 0.8 });
-          });
-        } catch (e) {
-          console.error('Erro ao carregar/desenhar shapes para linha', lineCode, e);
+      try {
+        const matchingShapeIds = routeShapes[lineCode] || [];
+        // As a safety, also include any shape id that includes the lineCode
+        for (const sid of this.shapeCache.keys()) {
+          if (!matchingShapeIds.includes(sid) && (sid.startsWith(lineCode) || sid.includes(lineCode))) matchingShapeIds.push(sid);
         }
-      } else {
-        this.activeBusLines.delete(lineCode);
-        // remove markers and polylines for this line via mapManager
-        this.mapManager.removeMarkersByPrefix(`${lineCode}-`);
-        this.mapManager.removePolylinesByPrefix(`${lineCode}-shape-`);
+
+        matchingShapeIds.forEach((sid, idx) => {
+          const latlngs = this.shapeCache.get(sid);
+          if (!latlngs || latlngs.length === 0) return;
+          const lineConfig = this.busLines.find(l => l.code === lineCode) || { color: '#3388ff' };
+          const polyId = `${lineCode}-shape-${sid}-${idx}`;
+          this.mapManager.addPolyline(polyId, latlngs, { color: lineConfig.color || '#3388ff', weight: 4, opacity: 0.8 });
+        });
+      } catch (e) {
+        console.error('Erro ao desenhar shapes para linha', lineCode, e);
       }
-      this.updateStats();
-    })();
+
+    } else {
+      this.activeBusLines.delete(lineCode);
+      // remove markers and polylines for this line via mapManager
+      this.mapManager.removeMarkersByPrefix(`${lineCode}-`);
+      this.mapManager.removePolylinesByPrefix(`${lineCode}-shape-`);
+    }
+    this.updateStats();
   }
 
-  async loadShapesIfNeeded() {
-    if (this._shapesLoaded) return;
-    try {
-      const resp = await fetch('/IDsShapes.txt');
-      if (!resp.ok) throw new Error('Não foi possível carregar IDsShapes.txt');
-      const text = await resp.text();
-      this.parseShapesCsv(text);
-      this._shapesLoaded = true;
-      console.log('✅ Shapes carregados e armazenados em cache');
-    } catch (e) {
-      console.error('Erro ao carregar shapes:', e);
-    }
-  }
-
-  parseShapesCsv(csvText) {
-    const lines = csvText.split(/\r?\n/).filter(Boolean);
-    if (lines.length === 0) return;
-    const header = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
-    const idx = {
-      shape_id: header.indexOf('shape_id'),
-      lat: header.indexOf('shape_pt_lat'),
-      lon: header.indexOf('shape_pt_lon'),
-      seq: header.indexOf('shape_pt_sequence')
-    };
-
-    const shapes = new Map();
-    for (let i = 1; i < lines.length; i++) {
-      const row = lines[i];
-      if (row.startsWith('/*')) continue;
-      const parts = row.split(',').map(p => p.replace(/"/g, '').trim());
-      if (parts.length <= Math.max(idx.shape_id, idx.lat, idx.lon)) continue;
-      const sid = parts[idx.shape_id];
-      const lat = parseFloat(parts[idx.lat]);
-      const lon = parseFloat(parts[idx.lon]);
-      const seq = parseInt(parts[idx.seq]) || 0;
-      if (!isFinite(lat) || !isFinite(lon) || !sid) continue;
-      if (!shapes.has(sid)) shapes.set(sid, []);
-      shapes.get(sid).push({ seq, lat, lng: lon });
-    }
-
-    for (const [sid, pts] of shapes.entries()) {
-      pts.sort((a,b) => a.seq - b.seq);
-      this.shapeCache.set(sid, pts.map(p => [p.lat, p.lng]));
-    }
-  }
+  // shapes are provided via imported `shapesData` and `routeShapes`
 
   selectAllLines(select) {
     document.querySelectorAll('input[data-line]').forEach(checkbox => {
