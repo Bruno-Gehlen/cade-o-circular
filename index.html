@@ -1,15 +1,22 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- meta Tags -->
     <title>Cadê o Circular - Rastreamento em Tempo Real</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="Permissions-Policy" content="geolocation=()">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- <meta name="apple-mobile-web-app-capable" content="yes"> -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Cadê o Circular?">
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./node_modules/remixicon/fonts/remixicon.css">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,7 +25,7 @@
     
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#32a0cd">
+    <meta name="theme-color" content="#292929">
     <link rel="icon" href="/favicon.ico">
 </head>
 <body data-color-scheme="dark">
@@ -54,7 +61,7 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h3>Linhas de Ônibus USP Butantã</h3>
-            <button id="sidebar-toggle" class="sidebar-toggle">◀️</button>
+            <button id="sidebar-toggle" class="sidebar-toggle"><i class="ri-contract-left-line"></i></button>
         </div>
         
         <div class="sidebar-content">
@@ -81,7 +88,7 @@
     <div class="bottom-panel" id="bottom-panel">
         <div class="panel-header">
             <h4>Estatísticas em Tempo Real</h4>
-            <button id="panel-toggle" class="panel-toggle">🔽</button>
+            <button id="panel-toggle" class="panel-toggle"><i class="ri-contract-left-line"></i></button>
         </div>
         <div class="panel-content">
             <div class="stats-grid">
@@ -113,7 +120,7 @@
     <!-- Toast Notifications -->
     <div id="error-toast" class="error-toast hidden">
         <div class="toast-content">
-            <span>⚠️</span>
+            <span><i class="ri-error-warning-line"></i></span>
             <span id="toast-message">Erro</span>
             <button id="close-error" class="toast-close">×</button>
         </div>
@@ -121,7 +128,7 @@
 
     <div id="success-toast" class="success-toast hidden">
         <div class="toast-content">
-            <span>✅</span>
+            <span><i class="ri-check-double-line"></i></span>
             <span id="success-message">Sucesso</span>
             <button id="close-success" class="toast-close">×</button>
         </div>

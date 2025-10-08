@@ -34,6 +34,8 @@ export default class BusTracker {
     this.checkStatus();
     this.hideLoadingOverlay();
     this.startAutoUpdate();
+    document.getElementById('sidebar')?.classList.add('collapsed');
+    document.getElementById('bottom-panel')?.classList.add('collapsed');
   }
 
   setupUI() {
@@ -48,13 +50,13 @@ export default class BusTracker {
         const panelEl = document.getElementById('bottom-panel');
         this._savedUIState = {
           topCollapsed: topEl?.classList.contains('collapsed') || false,
-          sidebarCollapsed: sidebarEl?.classList.contains('collapsed') || false,
+          sidebarCollapsed: sidebarEl?.classList.contains('abaixada') || false,
           panelCollapsed: panelEl?.classList.contains('abaixado') || false
         };
       }
 
       document.querySelector('.top-controls')?.classList.add('collapsed');
-      document.getElementById('sidebar')?.classList.add('collapsed');
+      document.getElementById('sidebar')?.classList.add('abaixada');
       document.getElementById('bottom-panel')?.classList.add('abaixado');
     });
 
@@ -66,7 +68,7 @@ export default class BusTracker {
 
       if (this._savedUIState) {
         if (this._savedUIState.topCollapsed) topEl?.classList.add('collapsed'); else topEl?.classList.remove('collapsed');
-        if (this._savedUIState.sidebarCollapsed) sidebarEl?.classList.add('collapsed'); else sidebarEl?.classList.remove('collapsed');
+        if (this._savedUIState.sidebarCollapsed) sidebarEl?.classList.add('abaixada'); else sidebarEl?.classList.remove('abaixada');
         if (this._savedUIState.panelCollapsed) panelEl?.classList.add('abaixado'); else panelEl?.classList.remove('abaixado');
         this._savedUIState = null;
       }
@@ -165,18 +167,24 @@ export default class BusTracker {
     });
 
     document.getElementById('select-all-btn')?.addEventListener('click', () => {
-      this.selectAllLines(true);
-      this.showToast('success', 'Todas as linhas selecionadas! 🚌');
+      document.querySelectorAll('input[data-line]').forEach(checkbox => {
+        checkbox.checked = true;
+        this.toggleBusLine(checkbox.dataset.line, true);
+      });
+      // this.showToast('success', 'Todas as linhas selecionadas! 🚌');
     });
 
     document.getElementById('select-none-btn')?.addEventListener('click', () => {
-      this.selectAllLines(false);
-      this.showToast('success', 'Todas as linhas desmarcadas');
+      document.querySelectorAll('input[data-line]').forEach(checkbox => {
+        checkbox.checked = false;
+        this.toggleBusLine(checkbox.dataset.line, false);
+      });
+      // this.showToast('success', 'Todas as linhas desmarcadas');
     });
 
     document.getElementById('refresh-btn')?.addEventListener('click', () => {
       this.refreshBusData();
-      this.showToast('success', 'Dados atualizados! 🔄');
+      this.showToast('success', 'Dados atualizados! <i class="ri-refresh-line"></i>');
     });
 
     document.addEventListener('change', (e) => {
@@ -196,16 +204,12 @@ export default class BusTracker {
 
   async findUserLocation() {
     const button = document.getElementById('find-location');
+    const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
+    const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
 
     if (!navigator.geolocation) {
       this.showToast('error', 'Geolocalização não suportada pelo navegador');
       return;
-    }
-
-    if (button) {
-      button.disabled = true;
-      button.innerHTML = '<span>📍</span><span class="btn-text">Localizando...</span>';
-      button.classList.add('loading');
     }
 
     const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 };
@@ -227,7 +231,7 @@ export default class BusTracker {
         iconHtml: userLocationMarkerHtml(),
         iconSize: [20, 20],
         iconAnchor: [10, 10],
-        popupHtml: userLocationPopupHtml(latitude, longitude, accuracy)
+        popupHtml: userLocationPopupHtml(latitude, longitude, accuracy, compensateFilter)
       });
 
       const zoom = calculateOptimalZoom(accuracy);
@@ -379,15 +383,6 @@ export default class BusTracker {
     this.updateStats();
   }
 
-  // shapes are provided via imported `shapesData` and `routeShapes`
-
-  selectAllLines(select) {
-    document.querySelectorAll('input[data-line]').forEach(checkbox => {
-      checkbox.checked = select;
-      this.toggleBusLine(checkbox.dataset.line, select);
-    });
-  }
-
   async refreshBusData() {
     for (const lineCode of this.activeBusLines) {
       await this.fetchBusPositions(lineCode);
@@ -424,7 +419,7 @@ export default class BusTracker {
     const toast = document.getElementById(`${type}-toast`);
     const messageElement = document.getElementById(type === 'error' ? 'toast-message' : 'success-message');
     if (toast && messageElement) {
-      messageElement.textContent = message;
+      messageElement.innerHTML = message;
       toast.classList.remove('hidden');
       toast.classList.add('visible');
       clearTimeout(toast._hideTimeout);
@@ -444,4 +439,6 @@ export default class BusTracker {
       }
     }, this.apiConfig.updateInterval);
   }
+
+  // shapes are provided via imported `shapesData` and `routeShapes`
 }
