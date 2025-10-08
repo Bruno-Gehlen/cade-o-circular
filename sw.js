@@ -1,13 +1,16 @@
-const CACHE_NAME = 'cade-o-circular-v1';
+const CACHE_NAME = `cade-o-circular-${new Date().getTime()}`;
 const PRECACHE_URLS = [
   '/',
-  '/index.html',
+  '/index.html', 
   '/style.css',
   '/manifest.json',
   '/favicon.ico',
   '/icons/icon-192.png',
-  '/icons/icon-512.png'
+  '/icons/icon-512.png',
+  '/src/main.js',
 ];
+console.log(`Service Worker: ${CACHE_NAME} instalado`);
+console.log(`Recursos ${PRECACHE_URLS.length} em cache`);
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
