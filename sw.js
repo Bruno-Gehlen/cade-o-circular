@@ -1,16 +1,31 @@
+// Variáveis de cache com timestamp para evitar conflitos
+const STATIC_CACHE = `static-${new Date().getTime()}`;
+const RUNTIME_CACHE = `runtime-${new Date().getTime()}`;
+const API_CACHE = `api-cache-${new Date().getTime()}`;
+
 const CACHE_NAME = `cade-o-circular-${new Date().getTime()}`;
 const PRECACHE_URLS = [
   '/',
-  '/index.html', 
-  '/style.css',
+  '/index.html',
+  '/style.css', 
   '/manifest.json',
   '/favicon.ico',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/src/main.js',
+  '/src/busTracker.js',
+  '/src/mapManager.js',
+  '/src/utils.js',
+  '/src/uiHelpers.js',
+  // Dependências externas críticas
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
+
 console.log(`Service Worker: ${CACHE_NAME} instalado`);
 console.log(`Recursos ${PRECACHE_URLS.length} em cache`);
+
+// Instalação e cache inicial
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

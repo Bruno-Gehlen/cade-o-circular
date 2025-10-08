@@ -1,42 +1,67 @@
 {
-  "name": "Monitor Ônibus USP Butantã",
+  "name": "Cadê o circular - USP",
   "short_name": "Cadê o circular",
   "description": "Monitoramento em tempo real dos circulares da USP Butantã",
-  "id": "/",
-  "start_url": "/",
+  "version": "0.1.0",
+  "lang": "pt-BR",
+  "categories": [
+    "transportation",
+    "travel",
+    "navigation",
+    "utilities",
+    "lifestyle"
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "launch_handler": {
+	  "client_mode": "navigate-existing"
+  },
+  "handle_links": "preferred",
+  "protocol_handlers": [
+    {
+      "protocol": "web+cadecircular",
+      "url": "/?handler=%s"
+    }
+  ],
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "dir": "ltr",
   "background_color": "#1f2121",
   "theme_color": "#292929",
   "orientation": "portrait-primary",
+  "dir": "ltr",
+  "id": "/",
+  "start_url": "/",
   "scope": "/",
-  "lang": "pt-BR",
   "icons": [
     {
       "src": "/icons/icon-72.png",
       "sizes": "72x72",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "monochrome"
     },
     {
       "src": "/icons/icon-96.png",
       "sizes": "96x96",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/icons/icon-128.png",
       "sizes": "128x128",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/icons/icon-144.png",
       "sizes": "144x144",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/icons/icon-152.png",
       "sizes": "152x152",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/icons/icon-192.png",
@@ -47,7 +72,8 @@
     {
       "src": "/icons/icon-384.png",
       "sizes": "384x384",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/icons/icon-512.png",
@@ -62,17 +88,29 @@
       "short_name": "Localização",
       "description": "Localizar sua posição no mapa",
       "url": "/?action=locate",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [
+        { 
+          "src": "/icons/icon-192.png", 
+          "sizes": "192x192", 
+          "type": "image/png" 
+        }
+      ]
     },
     {
       "name": "Centralizar na USP",
       "short_name": "Centralizar USP",
       "description": "Centralizar o mapa na USP Butantã",
       "url": "/?action=center_usp",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [
+        { 
+          "src": "/icons/icon-192.png", 
+          "sizes": "192x192", 
+          "type": "image/png" 
+        }
+    ]
     }
   ],
-  "related_applications": [],
-  "prefer_related_applications": false,
-  "categories": ["travel","navigation","utilities"]
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
 }

@@ -1,4 +1,4 @@
-import { isValidCoordinate, calculateOptimalZoom, calculateDistance, formatTimeLocale } from './utils.js';
+import { isValidCoordinate, calculateOptimalZoom, formatTimeLocale } from './utils.js';
 import { markerIconHtml, busPopupHtml, renderBusLineItemHtml, userLocationMarkerHtml, userLocationPopupHtml, stopMarkerHtml } from './uiHelpers.js';
 import MapManager from './mapManager.js';
 import { stopCoords, lineStops } from './stopsData.js';
@@ -36,6 +36,7 @@ export default class BusTracker {
     this.startAutoUpdate();
     document.getElementById('sidebar')?.classList.add('collapsed');
     document.getElementById('bottom-panel')?.classList.add('collapsed');
+    console.log(`Serviçp iniciado com ${this.busLines.length} linhas pré-configuradas`);
   }
 
   setupUI() {
@@ -442,4 +443,5 @@ export default class BusTracker {
   }
 
   // shapes are provided via imported `shapesData` and `routeShapes`
+
 }
