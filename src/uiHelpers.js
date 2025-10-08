@@ -29,7 +29,7 @@ export function userLocationMarkerHtml() {
 }
 
 export function userLocationPopupHtml(lat, lng, accuracy, compensateFilter = '') {
-  return `<div class="user-location-popup"><strong style="${compensateFilter}">📍 Você está aqui!</strong><br><small>Precisão: ≈${Math.round(accuracy)}m</small><br><small>Latitude: ${lat.toFixed(2)}</small><br><small>Longitude: ${lng.toFixed(2)}</small></div>`;
+  return `<div class="user-location-popup"><strong style="${compensateFilter}"><i class="ri-map-pin-fill"></i> Você está aqui!</strong><br><small>Precisão: ≈${Math.round(accuracy)}m</small><br><small>Latitude: ${lat.toFixed(2)}</small><br><small>Longitude: ${lng.toFixed(2)}</small></div>`;
 }
 
 export function stopMarkerHtml(stop, lineColor) {

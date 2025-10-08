@@ -1443,6 +1443,15 @@ body {
     color: var(--color-slate-900) !important;
 }
 
+body[data-color-scheme='dark'] .map-polyline {
+  filter: hue-rotate(180deg);
+}
+
+/* Opcional: remove o filtro no modo light */
+body[data-color-scheme='light'] .map-polyline {
+  filter: none;
+}
+
 /* Accessibility improvements */
 .bus-line-checkbox:focus,
 button:focus-visible {

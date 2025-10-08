@@ -116,7 +116,8 @@ export default class BusTracker {
     document.body.setAttribute('data-color-scheme', savedTheme);
 
     const themeIcon = document.querySelector('.theme-icon');
-    if (themeIcon) themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    // if (themeIcon) themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    if (themeIcon) themeIcon.innerHTML = savedTheme === 'dark' ? '<i class="ri-sun-fill"></i>' : '<i class="ri-moon-fill"></i>';
 
     this.updateStats();
   }
@@ -143,9 +144,9 @@ export default class BusTracker {
       localStorage.setItem('theme', newTheme);
 
       const icon = document.querySelector('.theme-icon');
-      if (icon) icon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+      if (icon) icon.innerHTML = newTheme === 'dark' ? '<i class="ri-sun-fill"></i>' : '<i class="ri-moon-fill"></i>';
 
-      const themeMessage = newTheme === 'dark' ? 'Tema escuro ativado! 🌙' : 'Tema claro ativado! ☀️';
+      const themeMessage = newTheme === 'dark' ? 'Tema escuro ativado! <i class="ri-moon-fill"></i>' : 'Tema claro ativado! <i class="ri-sun-fill"></i>';
       this.showToast('success', themeMessage);
     });
 
@@ -155,7 +156,7 @@ export default class BusTracker {
 
     document.getElementById('center-usp')?.addEventListener('click', () => {
       this.mapManager.setView([this.uspLocation.lat, this.uspLocation.lng], 15);
-      this.showToast('success', 'Centralizado na USP Butantã! 🎓');
+      this.showToast('success', 'Centralizado na USP Butantã! <i class="ri-graduation-cap-fill"></i>');
     });
 
     document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
@@ -238,10 +239,10 @@ export default class BusTracker {
       this.mapManager.setView([latitude, longitude], zoom);
 
       const accuracyText = accuracy < 50 ? 'Alta precisão' : accuracy < 200 ? 'Boa precisão' : 'Precisão aproximada';
-      this.showToast('success', `Te achei! ${accuracyText}! 📍`);
+      this.showToast('success', `Te achei! ${accuracyText}! <i class="ri-map-pin-fill"></i>`);
       console.log(`🎯 Localização obtida: ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${Math.round(accuracy)}m)`);
     } catch (error) {
-      let errorMessage = 'Erro ao obter localização 📍';
+      let errorMessage = 'Erro ao obter localização <i class="ri-map-pin-fill"></i>';
       if (error && error.code) {
         switch (error.code) {
           case 1:
@@ -262,7 +263,7 @@ export default class BusTracker {
     } finally {
       if (button) {
         button.disabled = false;
-        button.innerHTML = '<span>📍</span><span class="btn-text">Minha Localização</span>';
+        button.innerHTML = '<span><i class="ri-map-pin-fill"></i></span><span class="btn-text">Minha Localização</span>';
         button.classList.remove('loading');
       }
     }
@@ -368,7 +369,7 @@ export default class BusTracker {
           if (!latlngs || latlngs.length === 0) return;
           const lineConfig = this.busLines.find(l => l.code === lineCode) || { color: '#3388ff' };
           const polyId = `${lineCode}-shape-${sid}-${idx}`;
-          this.mapManager.addPolyline(polyId, latlngs, { color: lineConfig.color || '#3388ff', weight: 4, opacity: 0.8 });
+          this.mapManager.addPolyline(polyId, latlngs, { className: 'map-polyline', color: lineConfig.color || '#3388ff', weight: 4, opacity: 0.8 });
         });
       } catch (e) {
         console.error('Erro ao desenhar shapes para linha', lineCode, e);
