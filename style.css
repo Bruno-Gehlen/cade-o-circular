@@ -1121,6 +1121,18 @@ body {
 
 .bottom-panel.collapsed {
     max-height: 50px;
+    /* transform: translateY(95%); */
+    /* opacity: 0.7; */
+    pointer-events: auto;
+    transition: transform 0.7s var(--ease-standard), opacity 0.7s var(--ease-standard);
+}
+
+.bottom-panel.abaixado {
+    /* max-height: 50px; */
+    transform: translateY(95%);
+    opacity: 0.7;
+    pointer-events: auto;
+    transition: transform 0.7s var(--ease-standard), opacity 0.7s var(--ease-standard);
 }
 
 .bottom-panel.collapsed .panel-content {

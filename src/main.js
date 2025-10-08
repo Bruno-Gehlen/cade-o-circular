@@ -1,8 +1,8 @@
 import BusTracker from './busTracker.js';
 import busLines from './presetLines.js';
 
+// Checa que a DOM foi iniciada então inicia o BusTracker
 document.addEventListener('DOMContentLoaded', () => {
-  // Initialize with preset lines
   window.busTracker = new BusTracker({ busLines });
   console.log('🚌 Cade-o-circular iniciado!');
 });

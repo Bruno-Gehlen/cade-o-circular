@@ -12,40 +12,36 @@ export default class BusTracker {
       updateInterval: 30000,
       retryAttempts: 3
     }, options.apiConfig || {});
-
     this.busLines = options.busLines || [];
     this.uspLocation = options.uspLocation || { lat: -23.561, lng: -46.733 };
-  this.map = null;
-  this.mapManager = new MapManager();
-  this.activeBusLines = new Set();
-  this.shapeCache = new Map(); // shape_id => [[lat,lng], ...]
-  // Initialize shapeCache from imported shapesData
-  Object.keys(shapesData || {}).forEach(k => this.shapeCache.set(k, shapesData[k]));
+    this.map = null;
+    this.mapManager = new MapManager();
+    this.activeBusLines = new Set();
+    this.shapeCache = new Map(); // shape_id => [[lat,lng], ...]
+    // Initialize shapeCache from imported shapesData
+    Object.keys(shapesData || {}).forEach(k => this.shapeCache.set(k, shapesData[k]));
     this.authenticated = false;
     this.userLocationMarker = null;
-  this._savedUIState = null; // used to save/restore UI collapsed states during map interactions
-
+    this._savedUIState = null; // used to save/restore UI collapsed states during map interactions
     this.init();
   }
 
   init() {
-    this.setupMap();
     this.setupUI();
+    this.setupTheme();
     this.renderBusLines();
     this.bindEvents();
-    // Ensure panels are mutually exclusive: when sidebar is expanded, bottom-panel is collapsed and vice-versa
-    this.setSidebarCollapsed(false);
     this.checkStatus();
     this.hideLoadingOverlay();
     this.startAutoUpdate();
   }
 
-  setupMap() {
+  setupUI() {
     const self = this;
     this.mapManager.init('map', [this.uspLocation.lat, this.uspLocation.lng], 15);
 
+    // Save current UI states once, then collapse top-controls, sidebar and bottom-panel while moving
     this.mapManager.on('movestart', () => {
-      // Save current UI states once, then collapse top-controls, sidebar and bottom-panel while moving
       if (!this._savedUIState) {
         const topEl = document.querySelector('.top-controls');
         const sidebarEl = document.getElementById('sidebar');
@@ -53,17 +49,17 @@ export default class BusTracker {
         this._savedUIState = {
           topCollapsed: topEl?.classList.contains('collapsed') || false,
           sidebarCollapsed: sidebarEl?.classList.contains('collapsed') || false,
-          panelCollapsed: panelEl?.classList.contains('collapsed') || false
+          panelCollapsed: panelEl?.classList.contains('abaixado') || false
         };
       }
 
       document.querySelector('.top-controls')?.classList.add('collapsed');
       document.getElementById('sidebar')?.classList.add('collapsed');
-      document.getElementById('bottom-panel')?.classList.add('collapsed');
+      document.getElementById('bottom-panel')?.classList.add('abaixado');
     });
 
+    // Restore previously saved UI states after moving the map
     this.mapManager.on('moveend', () => {
-      // Restore previously saved UI states after moving the map
       const topEl = document.querySelector('.top-controls');
       const sidebarEl = document.getElementById('sidebar');
       const panelEl = document.getElementById('bottom-panel');
@@ -71,12 +67,8 @@ export default class BusTracker {
       if (this._savedUIState) {
         if (this._savedUIState.topCollapsed) topEl?.classList.add('collapsed'); else topEl?.classList.remove('collapsed');
         if (this._savedUIState.sidebarCollapsed) sidebarEl?.classList.add('collapsed'); else sidebarEl?.classList.remove('collapsed');
-        if (this._savedUIState.panelCollapsed) panelEl?.classList.add('collapsed'); else panelEl?.classList.remove('collapsed');
+        if (this._savedUIState.panelCollapsed) panelEl?.classList.add('abaixado'); else panelEl?.classList.remove('abaixado');
         this._savedUIState = null;
-      } else {
-        // Fallback: ensure top-controls visible and keep mutually-exclusive default
-        topEl?.classList.remove('collapsed');
-        this.setSidebarCollapsed(true);
       }
     });
 
@@ -96,7 +88,7 @@ export default class BusTracker {
       const currentX = e.touches ? e.touches[0].clientX : e.clientX;
       if ((currentX - dragStartX) > 40) {
         // Expand sidebar and collapse bottom-panel
-        self.setSidebarCollapsed(false);
+        // self.setSidebarCollapsed(false);
         const toggleBtn = document.getElementById('sidebar-toggle');
         if (toggleBtn) toggleBtn.focus();
         dragging = false;
@@ -117,7 +109,7 @@ export default class BusTracker {
     document.addEventListener('touchend', onDragEnd);
   }
 
-  setupUI() {
+  setupTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.body.setAttribute('data-color-scheme', savedTheme);
 
@@ -165,19 +157,11 @@ export default class BusTracker {
     });
 
     document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
-      // Toggle sidebar and keep bottom-panel opposite
-      const sidebarEl = document.getElementById('sidebar');
-      if (!sidebarEl) return;
-      const willCollapse = !sidebarEl.classList.contains('collapsed');
-      this.setSidebarCollapsed(willCollapse);
+        document.getElementById('sidebar')?.classList.toggle('collapsed');
     });
-
+    
     document.getElementById('panel-toggle')?.addEventListener('click', () => {
-      // Toggle bottom-panel and keep sidebar opposite
-      const panelEl = document.getElementById('bottom-panel');
-      if (!panelEl) return;
-      const willCollapse = !panelEl.classList.contains('collapsed');
-      this.setBottomPanelCollapsed(willCollapse);
+        document.getElementById('bottom-panel')?.classList.toggle('collapsed');
     });
 
     document.getElementById('select-all-btn')?.addEventListener('click', () => {
@@ -331,7 +315,7 @@ export default class BusTracker {
     if (!lineConfig) return;
 
     buses.forEach(bus => {
-  const markerId = `${lineCode}-bus-${bus.p}`;
+      const markerId = `${lineCode}-bus-${bus.p}`;
       const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
       const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
 
@@ -427,34 +411,6 @@ export default class BusTracker {
     if (activeLines) activeLines.textContent = this.activeBusLines.size;
     if (totalBuses) totalBuses.textContent = this.mapManager?.markers.size || 0;
   }
-
-  // Ensure sidebar and bottom-panel are mutually exclusive.
-  // When sidebar is collapsed = true -> bottom-panel should be expanded (not collapsed), and vice-versa.
-  setSidebarCollapsed(collapsed) {
-    const sidebarEl = document.getElementById('sidebar');
-    const panelEl = document.getElementById('bottom-panel');
-    if (sidebarEl) {
-      if (collapsed) sidebarEl.classList.add('collapsed'); else sidebarEl.classList.remove('collapsed');
-    }
-    if (panelEl) {
-      // bottom-panel should be opposite of sidebar
-      if (collapsed) panelEl.classList.remove('collapsed'); else panelEl.classList.add('collapsed');
-    }
-  }
-
-  setBottomPanelCollapsed(collapsed) {
-    const sidebarEl = document.getElementById('sidebar');
-    const panelEl = document.getElementById('bottom-panel');
-    if (panelEl) {
-      if (collapsed) panelEl.classList.add('collapsed'); else panelEl.classList.remove('collapsed');
-    }
-    if (sidebarEl) {
-      // sidebar should be opposite of bottom-panel
-      if (collapsed) sidebarEl.classList.remove('collapsed'); else sidebarEl.classList.add('collapsed');
-    }
-  }
-
-  
 
   updateConnectionStatus(status, message) {
     const statusElement = document.getElementById('connection-status');

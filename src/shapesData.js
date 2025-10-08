@@ -1,4 +1,3 @@
-// Auto-generated from IDsShapes.txt
 // Export: { "shape_id": [[lat, lon], ...], ... }
 export default {
   "78319": [

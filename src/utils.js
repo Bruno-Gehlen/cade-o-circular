@@ -1,4 +1,3 @@
-// Utility helpers for BusTracker (pure functions to keep BusTracker class lean)
 export function isValidCoordinate(lat, lng) {
   return (
     typeof lat === 'number' &&
