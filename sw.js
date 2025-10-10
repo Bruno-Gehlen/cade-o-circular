@@ -22,8 +22,8 @@ const PRECACHE_URLS = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
-console.log(`Service Worker: ${CACHE_NAME} instalado`);
-console.log(`Recursos ${PRECACHE_URLS.length} em cache`);
+console.log(`Service Worker instalado: ${CACHE_NAME}`);
+console.log(`Recursos em cache: ${PRECACHE_URLS.length}`);
 
 // Instalação e cache inicial
 

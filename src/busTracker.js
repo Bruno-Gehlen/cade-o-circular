@@ -36,7 +36,7 @@ export default class BusTracker {
     this.startAutoUpdate();
     document.getElementById('sidebar')?.classList.add('collapsed');
     document.getElementById('bottom-panel')?.classList.add('collapsed');
-    console.log(`Serviçp iniciado com ${this.busLines.length} linhas pré-configuradas`);
+    console.log(`Serviço iniciado com ${this.busLines.length} linhas pré-configuradas`);
   }
 
   setupUI() {
