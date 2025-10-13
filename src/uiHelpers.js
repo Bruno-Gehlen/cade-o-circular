@@ -1,8 +1,47 @@
 // UI helper functions for rendering HTML snippets used by BusTracker
-export function markerIconHtml(lineConfig, lineCode, compensateFilter = '') {
+export function markerIconHtml(lineConfig, lineCode, compensateFilter = '', direction = 0) {
   const shortCode = lineCode.split('-')[0].slice(-2);
-  // inner element carries the per-line background color; outer has general marker styles
-  return `<div class="bus-marker-inner" style="background-color: ${lineConfig.color}; ${compensateFilter}">${shortCode}</div>`;
+  const rotationStyle = `transform: rotate(${direction}deg);`;
+  
+  // Cores baseadas no tema
+  const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
+  const textColor = isDark ? '#000' : '#fff';
+  const strokeColor = isDark ? '#000' : '#fff';
+  const shadowOpacity = isDark ? '0.6' : '0.3';
+  
+  return `
+    <div class="bus-marker-svg" style="${compensateFilter}; position: relative;">
+      <div style="${rotationStyle}">
+        <svg width="27" height="32" viewBox="0 0 65 65" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="shadow-${shortCode}">
+              <feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-opacity="${shadowOpacity}"/>
+            </filter>
+          </defs>
+
+          <!-- Corpo da gota -->
+          <path d="M31.993 2C20.563 17.624 14 32.007 14 43.827C14 53.859 22.064 62 32.001 62C41.946 62 50 53.859 50 43.827C50 32.007 43.245 17.383 31.993 2z"
+                fill="${lineConfig.color}" 
+                stroke="${strokeColor}" 
+                stroke-width="2" 
+                filter="url(#shadow-${shortCode})"/>
+
+        </svg>
+        <p style="
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -40%) rotate(-${direction}deg);
+          text-align: center;
+          font-family: Inter, -apple-system, sans-serif;
+          font-size: 10px;
+          font-weight: 600;
+          color: ${textColor};
+          margin: 0;
+          line-height: 1;">
+          ${shortCode}
+        </p>
+  `;
 }
 
 export function busPopupHtml(lineConfig, lineCode, bus, compensateFilter = '') {

@@ -1,4 +1,4 @@
-import { isValidCoordinate, calculateOptimalZoom, formatTimeLocale } from './utils.js';
+import { isValidCoordinate, calculateOptimalZoom, formatTimeLocale, calculateBusDirection } from './utils.js';
 import { markerIconHtml, busPopupHtml, renderBusLineItemHtml, userLocationMarkerHtml, userLocationPopupHtml, stopMarkerHtml } from './uiHelpers.js';
 import MapManager from './mapManager.js';
 import { stopCoords, lineStops } from './stopsData.js';
@@ -17,12 +17,12 @@ export default class BusTracker {
     this.map = null;
     this.mapManager = new MapManager();
     this.activeBusLines = new Set();
-    this.shapeCache = new Map(); // shape_id => [[lat,lng], ...]
-    // Initialize shapeCache from imported shapesData
+    this.shapeCache = new Map(); 
+    this.busPositions = new Map();
     Object.keys(shapesData || {}).forEach(k => this.shapeCache.set(k, shapesData[k]));
     this.authenticated = false;
     this.userLocationMarker = null;
-    this._savedUIState = null; // used to save/restore UI collapsed states during map interactions
+    this._savedUIState = null;
     this.init();
   }
 
@@ -34,9 +34,9 @@ export default class BusTracker {
     this.checkStatus();
     this.hideLoadingOverlay();
     this.startAutoUpdate();
-    document.getElementById('sidebar')?.classList.add('collapsed');
+    // document.getElementById('sidebar')?.classList.add('collapsed');
     document.getElementById('bottom-panel')?.classList.add('collapsed');
-    console.log(`Serviço iniciado com ${this.busLines.length} linhas pré-configuradas`);
+    console.log(`🧩 Serviço iniciado com ${this.busLines.length} linhas pré-configuradas`);
   }
 
   setupUI() {
@@ -110,6 +110,9 @@ export default class BusTracker {
     dragHandle.addEventListener('touchstart', onDragStart);
     document.addEventListener('touchmove', onDragMove);
     document.addEventListener('touchend', onDragEnd);
+
+    const lastUpdate = document.getElementById('last-update');
+    if (lastUpdate) lastUpdate.textContent = `Atualizado às ${formatTimeLocale()}`;
   }
 
   setupTheme() {
@@ -186,7 +189,6 @@ export default class BusTracker {
 
     document.getElementById('refresh-btn')?.addEventListener('click', () => {
       this.refreshBusData();
-      this.showToast('success', 'Dados atualizados! <i class="ri-refresh-line"></i>');
     });
 
     document.addEventListener('change', (e) => {
@@ -321,16 +323,33 @@ export default class BusTracker {
     if (!lineConfig) return;
 
     buses.forEach(bus => {
+      const busId = `${lineCode}-${bus.p}`;
       const markerId = `${lineCode}-bus-${bus.p}`;
       const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
       const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
 
+      const direction = calculateBusDirection(this.busPositions, busId, bus.py, bus.px);
+
       this.mapManager.addMarker(markerId, bus.py, bus.px, {
-        iconHtml: `<div class=\"bus-marker\">${markerIconHtml(lineConfig, lineCode, compensateFilter)}</div>`,
+        iconHtml: `<div class="bus-marker">${markerIconHtml(lineConfig, lineCode, compensateFilter, direction)}</div>`,
         iconSize: [24, 24],
         popupHtml: busPopupHtml(lineConfig, lineCode, bus, compensateFilter)
       });
     });
+
+    const totalBuses = document.getElementById('total-buses');
+    if (totalBuses) {
+    let busCount = 0;
+    if (this.mapManager?.markers) {
+      // Filtrar markers que contêm '-bus-' no ID
+      for (const [markerId] of this.mapManager.markers) {
+        if (markerId.includes('-bus-')) {
+          busCount++;
+        }
+      }
+    }
+    totalBuses.textContent = busCount;
+    }
   }
 
   addStopMarkers(lineCode) {
@@ -386,27 +405,40 @@ export default class BusTracker {
   }
 
   async refreshBusData() {
-    for (const lineCode of this.activeBusLines) {
-      await this.fetchBusPositions(lineCode);
-    }
-
-    const lastUpdate = document.getElementById('last-update');
-    if (lastUpdate) lastUpdate.textContent = `Atualizado às ${formatTimeLocale()}`;
-
     if (this.activeBusLines.size === 0) {
       this.showToast('error', 'Selecione pelo menos uma linha para atualizar');
       return;
     }
 
+    for (const lineCode of this.activeBusLines) {
+      await this.fetchBusPositions(lineCode);
+    }
+  
     this.updateStats();
+
+    this.showToast('success', 'Dados atualizados! <i class="ri-refresh-line"></i>');
   }
 
   updateStats() {
-    const activeLines = document.getElementById('active-lines');
-    const totalBuses = document.getElementById('total-buses');
-
-    if (activeLines) activeLines.textContent = this.activeBusLines.size;
-    if (totalBuses) totalBuses.textContent = this.mapManager?.markers.size || 0;
+  const activeLines = document.getElementById('active-lines');
+  const totalBuses = document.getElementById('total-buses');
+  const lastUpdate = document.getElementById('last-update');
+  
+  if (lastUpdate) lastUpdate.textContent = `Atualizado às ${formatTimeLocale()}`;
+  if (activeLines) activeLines.textContent = this.activeBusLines.size;
+  
+  if (totalBuses) {
+    let busCount = 0;
+    if (this.mapManager?.markers) {
+      // Filtrar markers que contêm '-bus-' no ID
+      for (const [markerId] of this.mapManager.markers) {
+        if (markerId.includes('-bus-')) {
+          busCount++;
+        }
+      }
+    }
+    totalBuses.textContent = busCount;
+    }
   }
 
   updateConnectionStatus(status, message) {
