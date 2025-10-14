@@ -119,60 +119,79 @@ app.get('/api/lines/:code/positions', ensureAuthenticated, async (req, res) => {
       });
     }
 
-    // Pega a primeira linha que corresponde (tenta diferentes nomes retornados pela API)
-    const targetLine = lines.find(line => {
+    // MUDANÇA PRINCIPAL: Buscar TODAS as linhas que correspondem ao código
+    const matchingLines = lines.filter(line => {
       const display = (line.letreiro || line.lt || line.Letreiro || line.tp || line.c || '').toString();
       return display.includes(code);
-    }) || lines[0];
-
-    const lineId = targetLine.cl || targetLine.CodigoLinha || targetLine.cl || targetLine.cl;
-    const lineName = targetLine.letreiro || targetLine.lt || targetLine.Letreiro || targetLine.tp || targetLine.c || '';
-    const lineDirection = targetLine.sentido || targetLine.Sentido || targetLine.sl || null;
-
-    console.log(`🎯 Linha selecionada: ${lineName} (ID: ${lineId})`);
-
-    // Busca as posições dos ônibus desta linha
-    const positionResponse = await fetch(`${SPTRANS_BASE_URL}/Posicao/Linha?codigoLinha=${lineId}`, {
-      headers: {
-        'Cookie': authCookies
-      }
     });
 
-    if (!positionResponse.ok) {
-      throw new Error(`Erro ao buscar posições: ${positionResponse.status}`);
+    // Se não encontrar nenhuma correspondência, usar todas as linhas retornadas
+    const targetLines = matchingLines.length > 0 ? matchingLines : lines;
+    
+    console.log(`🎯 Linhas selecionadas: ${targetLines.length}`);
+
+    // Buscar posições para TODAS as linhas encontradas
+    const allBuses = [];
+    const lineInfos = [];
+
+    for (const targetLine of targetLines) {
+      const lineId = targetLine.cl || targetLine.CodigoLinha || targetLine.cl;
+      const lineName = targetLine.letreiro || targetLine.lt || targetLine.Letreiro || targetLine.tp || targetLine.c || '';
+      const lineDirection = targetLine.sentido || targetLine.Sentido || targetLine.sl || null;
+
+      console.log(`🔍 Buscando ônibus para linha: ${lineName} (ID: ${lineId}, Sentido: ${lineDirection})`);
+
+      // Busca as posições dos ônibus desta linha específica
+      const positionResponse = await fetch(`${SPTRANS_BASE_URL}/Posicao/Linha?codigoLinha=${lineId}`, {
+        headers: {
+          'Cookie': authCookies
+        }
+      });
+
+      if (!positionResponse.ok) {
+        console.warn(`⚠️ Erro ao buscar posições para linha ${lineId}: ${positionResponse.status}`);
+        continue;
+      }
+
+      const positionData = await positionResponse.json();
+
+      // A API pode retornar vs no root ou um objeto l[] com vs
+      let vehicles = [];
+      if (Array.isArray(positionData.vs)) {
+        vehicles = positionData.vs;
+      } else if (Array.isArray(positionData.l) && positionData.l.length > 0 && Array.isArray(positionData.l[0].vs)) {
+        vehicles = positionData.l[0].vs;
+      }
+
+      // Normaliza os veículos e adiciona informação do sentido
+      const buses = vehicles.map(bus => ({
+        p: bus.p || bus.Prefixo || bus.prefixo,
+        py: bus.py || bus.py || bus.py === 0 ? bus.py : (bus.py || bus.py),
+        px: bus.px || bus.px || bus.px === 0 ? bus.px : (bus.px || bus.px),
+        a: typeof bus.a !== 'undefined' ? bus.a : (bus.a || false),
+        ta: bus.ta || bus.Ta || bus.ta || null,
+        sl: lineDirection, // Adiciona informação do sentido
+        lineId: lineId,    // Adiciona ID da linha específica
+        raw: bus
+      }));
+
+      allBuses.push(...buses);
+      lineInfos.push({
+        id: lineId,
+        name: lineName,
+        direction: lineDirection
+      });
+
+      console.log(`✅ ${buses.length} ônibus encontrados para sentido ${lineDirection}`);
     }
 
-    const positionData = await positionResponse.json();
-
-    // A API pode retornar vs no root (Posicao/Linha) ou um objeto l[] com vs (em outros endpoints)
-    let vehicles = [];
-    if (Array.isArray(positionData.vs)) {
-      vehicles = positionData.vs;
-    } else if (Array.isArray(positionData.l) && positionData.l.length > 0 && Array.isArray(positionData.l[0].vs)) {
-      vehicles = positionData.l[0].vs;
-    }
-
-    // Normaliza os veículos para manter as chaves usadas pela API original (p, py, px, a, ta)
-    const buses = vehicles.map(bus => ({
-      p: bus.p || bus.Prefixo || bus.prefixo,
-      py: bus.py || bus.py || bus.py === 0 ? bus.py : (bus.py || bus.py),
-      px: bus.px || bus.px || bus.px === 0 ? bus.px : (bus.px || bus.px),
-      a: typeof bus.a !== 'undefined' ? bus.a : (bus.a || false),
-      ta: bus.ta || bus.Ta || bus.ta || null,
-      raw: bus
-    }));
-
-    console.log(`🚌 Ônibus encontrados: ${buses.length}`);
+    console.log(`🚌 Total de ônibus encontrados: ${allBuses.length}`);
 
     res.json({
       success: true,
       lineCode: code,
-      lineInfo: {
-        id: lineId,
-        name: lineName,
-        direction: lineDirection
-      },
-      buses: buses,
+      lineInfo: lineInfos, // Array com informações de todas as linhas/sentidos
+      buses: allBuses,     // Array com todos os ônibus de todos os sentidos
       timestamp: new Date().toISOString()
     });
 
@@ -186,6 +205,7 @@ app.get('/api/lines/:code/positions', ensureAuthenticated, async (req, res) => {
     });
   }
 });
+
 
 // ENDPOINT ADICIONAL: Buscar linhas
 app.get('/api/lines/search', ensureAuthenticated, async (req, res) => {

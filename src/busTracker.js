@@ -316,32 +316,34 @@ export default class BusTracker {
   }
 
   updateBusMarkers(lineCode, buses) {
-    // Remove old bus markers for this line via mapManager (keep stop markers)
-    this.mapManager.removeMarkersByPrefix(`${lineCode}-bus-`);
+  // Remove old bus markers for this line
+  this.mapManager.removeMarkersByPrefix(`${lineCode}-bus-`);
 
-    const lineConfig = this.busLines.find(line => line.code === lineCode);
-    if (!lineConfig) return;
+  const lineConfig = this.busLines.find(line => line.code === lineCode);
+  if (!lineConfig) return;
 
-    buses.forEach(bus => {
-      const busId = `${lineCode}-${bus.p}`;
-      const markerId = `${lineCode}-bus-${bus.p}`;
-      const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
-      const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
+  buses.forEach(bus => {
+    const busId = `${lineCode}-${bus.p}`;
+    const markerId = `${lineCode}-bus-${bus.p}`;
+    const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
+    const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
 
-      const direction = calculateBusDirection(this.busPositions, busId, bus.py, bus.px);
+    const direction = calculateBusDirection(this.busPositions, busId, bus.py, bus.px);
+    
+    // Adiciona indicação visual do sentido se disponível
+    const sentidoInfo = bus.sl ? ` (Sentido ${bus.sl})` : '';
 
-      this.mapManager.addMarker(markerId, bus.py, bus.px, {
-        iconHtml: `<div class="bus-marker">${markerIconHtml(lineConfig, lineCode, compensateFilter, direction)}</div>`,
-        iconSize: [24, 24],
-        popupHtml: busPopupHtml(lineConfig, lineCode, bus, compensateFilter)
-      });
+    this.mapManager.addMarker(markerId, bus.py, bus.px, {
+      iconHtml: `<div class="bus-marker">${markerIconHtml(lineConfig, lineCode, compensateFilter, direction)}</div>`,
+      iconSize: [24, 24],
+      popupHtml: busPopupHtml(lineConfig, lineCode, bus, compensateFilter) + sentidoInfo
     });
+  });
 
-    const totalBuses = document.getElementById('total-buses');
-    if (totalBuses) {
+  const totalBuses = document.getElementById('total-buses');
+  if (totalBuses) {
     let busCount = 0;
     if (this.mapManager?.markers) {
-      // Filtrar markers que contêm '-bus-' no ID
       for (const [markerId] of this.mapManager.markers) {
         if (markerId.includes('-bus-')) {
           busCount++;
@@ -349,8 +351,9 @@ export default class BusTracker {
       }
     }
     totalBuses.textContent = busCount;
-    }
   }
+}
+
 
   addStopMarkers(lineCode) {
     const lineConfig = this.busLines.find(line => line.code === lineCode);
