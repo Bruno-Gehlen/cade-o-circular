@@ -89,3 +89,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 export default window.busTracker;
+
+
+// // Adicionar log mais detalhado na inicialização
+// document.addEventListener('DOMContentLoaded', () => {
+//   console.log('🚌 Iniciando Cadê o Circular...');
+//   console.log(`📍 Linhas configuradas: ${busLines.map(l => l.code).join(', ')}`);
+  
+//   window.swManager = new ServiceWorkerManager();
+//   window.busTracker = new BusTracker({ busLines });
+  
+//   console.log('✅ Cadê o Circular iniciado - pré-carregamento em andamento');
+// });

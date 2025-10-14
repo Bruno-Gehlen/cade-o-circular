@@ -26,12 +26,13 @@ export default class BusTracker {
     this.init();
   }
 
-  init() {
+  async init() {
     this.setupUI();
     this.setupTheme();
     this.renderBusLines();
     this.bindEvents();
     this.checkStatus();
+    await this.preloadBusPositions();
     this.hideLoadingOverlay();
     this.startAutoUpdate();
     // document.getElementById('sidebar')?.classList.add('collapsed');
@@ -289,6 +290,40 @@ export default class BusTracker {
     }
   }
 
+  async preloadBusPositions() {
+  console.log('🔄 Pré-carregando posições dos ônibus...');
+  const preloadPromises = this.busLines.map(async (line) => {
+    try {
+      const response = await fetch(`${this.apiConfig.baseUrl}/lines/${line.code}/positions`);
+      if (!response.ok) return;
+      
+      const data = await response.json();
+      let buses = [];
+      if (Array.isArray(data.buses)) buses = data.buses;
+      else if (Array.isArray(data.vs)) buses = data.vs;
+
+      // Armazena as posições sem criar markers
+      buses.forEach(bus => {
+        const busId = `${line.code}-${bus.p}`;
+        this.busPositions.set(busId, {
+          lat: bus.py,
+          lng: bus.px,
+          timestamp: Date.now()
+        });
+      });
+      
+      console.log(`✅ Posições pré-carregadas para linha ${line.code}: ${buses.length} ônibus`);
+    } catch (error) {
+      console.log(`⚠️ Falha ao pré-carregar linha ${line.code}:`, error.message);
+    }
+  });
+
+  await Promise.allSettled(preloadPromises);
+  console.log('🎯 Pré-carregamento concluído');
+  }
+
+  // A PARTIR DAQUI AS CANÔNICAS
+
   async fetchBusPositions(lineCode) {
     try {
       console.log(`🔍 Buscando posições da linha: ${lineCode}`);
@@ -316,7 +351,6 @@ export default class BusTracker {
   }
 
   updateBusMarkers(lineCode, buses) {
-  // Remove old bus markers for this line
   this.mapManager.removeMarkersByPrefix(`${lineCode}-bus-`);
 
   const lineConfig = this.busLines.find(line => line.code === lineCode);
@@ -330,13 +364,12 @@ export default class BusTracker {
 
     const direction = calculateBusDirection(this.busPositions, busId, bus.py, bus.px);
     
-    // Adiciona indicação visual do sentido se disponível
     const sentidoInfo = bus.sl ? ` (Sentido ${bus.sl})` : '';
 
     this.mapManager.addMarker(markerId, bus.py, bus.px, {
       iconHtml: `<div class="bus-marker">${markerIconHtml(lineConfig, lineCode, compensateFilter, direction)}</div>`,
       iconSize: [24, 24],
-      popupHtml: busPopupHtml(lineConfig, lineCode, bus, compensateFilter) + sentidoInfo
+      popupHtml: busPopupHtml(lineConfig, lineCode, bus, compensateFilter, sentidoInfo)
     });
   });
 
@@ -352,20 +385,22 @@ export default class BusTracker {
     }
     totalBuses.textContent = busCount;
   }
-}
-
+  }
 
   addStopMarkers(lineCode) {
     const lineConfig = this.busLines.find(line => line.code === lineCode);
     if (!lineConfig) return;
     const stopsForLine = lineStops[lineCode] || [];
 
+    const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
+    const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
+
     stopsForLine.forEach(stopId => {
       const stop = stopCoords[stopId];
       if (!stop || !isFinite(stop.lat) || !isFinite(stop.lon)) return;
       const markerId = `${lineCode}-stop-${stopId}`;
       this.mapManager.addMarker(markerId, stop.lat, stop.lon, {
-        iconHtml: stopMarkerHtml(stop, lineConfig.color),
+        iconHtml: stopMarkerHtml(stop, lineConfig.color, compensateFilter),
         iconSize: [14, 14],
         iconAnchor: [7, 7],
         popupHtml: `<div class=\"stop-popup\"><strong>${stop.name}</strong><br><small>ID: ${stopId}</small></div>`
@@ -465,7 +500,15 @@ export default class BusTracker {
   }
 
   hideLoadingOverlay() {
-    setTimeout(() => { document.getElementById('loading-overlay')?.classList.add('hidden'); }, 1500);
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) {
+    const message = overlay.querySelector('.loading-text');
+    if (message) message.textContent = 'Finalizando carregamento...';
+    
+    setTimeout(() => {
+      overlay.classList.add('hidden');
+      }, 1500);
+    }
   }
 
   startAutoUpdate() {
