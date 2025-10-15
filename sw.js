@@ -10,16 +10,20 @@ const PRECACHE_URLS = [
   '/style.css', 
   '/manifest.json',
   '/favicon.ico',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  '/icons/icon-72.png',      
+  '/icons/icon-96.png',      
+  '/icons/icon-128.png',     
+  '/icons/icon-256.png',     
+  '/icons/icon-512.png',     
   '/src/main.js',
   '/src/busTracker.js',
   '/src/mapManager.js',
   '/src/utils.js',
   '/src/uiHelpers.js',
-  // Dependências externas críticas
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+  '/src/presetLines.js',     
+  '/src/routeShapes.js',     
+  '/src/shapesData.js',      
+  '/src/stopsData.js'  
 ];
 
 console.log(`Service Worker instalado: ${CACHE_NAME}`);
