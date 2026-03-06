@@ -9,7 +9,7 @@ export default class BusTracker {
   constructor(options = {}) {
     this.apiConfig = Object.assign({
       baseUrl: window.location.origin + '/api',
-      updateInterval: 30000,
+      updateInterval: 15000,
       retryAttempts: 3
     }, options.apiConfig || {});
     this.busLines = options.busLines || [];
