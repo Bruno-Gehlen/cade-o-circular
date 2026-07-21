@@ -19,10 +19,10 @@ const SPTRANS_BASE_URL = 'https://api.olhovivo.sptrans.com.br/v2.1';
 // Letreiros monitorados (sem o sufixo de tipo, ex.: "8082" de "8082-10")
 const LINE_CODES = ['8012', '8022', '8082', '8083', '8084', '8085'];
 
-// TTL do cache de posições. A SPTrans atualiza as posições dos veículos em
-// ciclos de ~30s, então consultar o upstream com mais frequência que isso
-// só gera carga desnecessária sem retornar dados mais novos.
-const POSITIONS_TTL_MS = 20000;
+// TTL do cache de posições. Alinhado com o intervalo de atualização do
+// frontend (10s): N usuários simultânicos continuam gerando no máximo
+// 1 chamada upstream /Posicao por janela de cache (~6/min no total).
+const POSITIONS_TTL_MS = 10000;
 
 // O frontend é servido por este mesmo servidor (mesma origem), portanto
 // não é necessário habilitar CORS.

@@ -29,13 +29,17 @@ class ServiceWorkerManager {
     } catch (error) {
       console.error('❌ Falha ao registrar Service Worker:', error);
     }
+
+    // Verificação de versão roda independente do registro do SW
+    this.checkAppVersion();
   }
 
   setupUpdateHandling() {
-    // Detecta quando nova versão está disponível
+    // Detecta quando nova versão do SW está disponível (sw.js mudou)
     this.registration.addEventListener('updatefound', () => {
       const newWorker = this.registration.installing;
-      
+      if (!newWorker) return;
+
       newWorker.addEventListener('statechange', () => {
         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
           this.showUpdatePrompt();
@@ -49,10 +53,61 @@ class ServiceWorkerManager {
     });
   }
 
+  async checkAppVersion() {
+    try {
+      const res = await fetch('/manifest.json', { cache: 'no-store' });
+      const manifest = await res.json();
+      this._latestVersion = manifest.version;
+
+      const current = localStorage.getItem('appVersion');
+      if (!current) {
+        localStorage.setItem('appVersion', manifest.version);
+      } else if (current !== manifest.version) {
+        console.log(`🆕 Nova versão detectada: ${current} → ${manifest.version}`);
+        this.showUpdatePrompt();
+      }
+    } catch (err) {
+      console.warn('⚠️ Falha ao verificar versão do app:', err);
+    }
+  }
+
+  // Overlay de atualização obrigatória: ocupa a tela toda e não pode ser
+  // fechado — a única saída é atualizar (ou recarregar a página, o que
+  // também ativa a nova versão)
   showUpdatePrompt() {
-    // Integrar com sua UI existente
-    if (confirm('Nova versão  do site disponível! Atualizar agora?')) {
+    const overlay = document.getElementById('update-overlay');
+    if (!overlay) return;
+
+    overlay.classList.remove('hidden');
+
+    const btn = document.getElementById('update-now-btn');
+    if (btn && !btn._updateBound) {
+      btn._updateBound = true;
+      btn.addEventListener('click', () => this.applyUpdate());
+    }
+  }
+
+  async applyUpdate() {
+    // Marca a nova versão como aceita antes de recarregar, para que a
+    // verificação de versão não exiba o overlay novamente após o reload
+    try {
+      if (!this._latestVersion) {
+        const res = await fetch('/manifest.json', { cache: 'no-store' });
+        this._latestVersion = (await res.json()).version;
+      }
+      if (this._latestVersion) localStorage.setItem('appVersion', this._latestVersion);
+    } catch (err) {
+      console.warn('⚠️ Falha ao registrar versão:', err);
+    }
+
+    if (this.registration && this.registration.waiting) {
+      // Há um novo SW aguardando: ativa (o evento controllerchange recarrega)
       this.skipWaiting();
+    } else {
+      // sw.js não mudou (só a versão do manifest): limpa os caches para que
+      // o SW re-precacheie com o novo nome derivado da versão e recarrega
+      try { await this.clearCache(); } catch (err) { console.warn(err); }
+      window.location.reload();
     }
   }
 
@@ -64,20 +119,24 @@ class ServiceWorkerManager {
 
   // Método para forçar limpeza de cache (para emergências)
   async clearCache() {
-    if (this.registration) {
-      const messageChannel = new MessageChannel();
-      
-      return new Promise((resolve) => {
-        messageChannel.port1.onmessage = (event) => {
-          resolve(event.data);
-        };
+    if (!this.registration || !this.registration.active) return;
 
-        this.registration.active.postMessage(
-          { type: 'CLEAR_CACHE' }, 
-          [messageChannel.port2]
-        );
-      });
-    }
+    const messageChannel = new MessageChannel();
+
+    return new Promise((resolve) => {
+      // Timeout de segurança: se o SW não responder, segue com o reload
+      const timer = setTimeout(() => resolve({ timeout: true }), 3000);
+
+      messageChannel.port1.onmessage = (event) => {
+        clearTimeout(timer);
+        resolve(event.data);
+      };
+
+      this.registration.active.postMessage(
+        { type: 'CLEAR_CACHE' }, 
+        [messageChannel.port2]
+      );
+    });
   }
 }
 

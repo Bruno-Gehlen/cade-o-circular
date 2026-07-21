@@ -1,6 +1,17 @@
-// Versão do cache: incrementar manualmente a cada release para invalidar
-// os caches antigos dos clientes.
-const CACHE_NAME = 'cade-o-circular-v3';
+// O nome do cache é derivado da versão do manifest.json: para publicar uma
+// nova versão basta incrementar "version" no manifest — não é mais preciso
+// editar este arquivo a cada release.
+let cacheNamePromise = null;
+
+function getCacheName() {
+  if (!cacheNamePromise) {
+    cacheNamePromise = fetch('/manifest.json', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((manifest) => `cade-o-circular-${manifest.version || 'dev'}`)
+      .catch(() => 'cade-o-circular-fallback');
+  }
+  return cacheNamePromise;
+}
 
 const PRECACHE_URLS = [
   '/',
@@ -24,25 +35,31 @@ const PRECACHE_URLS = [
   '/src/stopsData.js'  
 ];
 
-console.log(`Service Worker instalado: ${CACHE_NAME}`);
-console.log(`Recursos em cache: ${PRECACHE_URLS.length}`);
+async function precache() {
+  const cacheName = await getCacheName();
+  console.log(`Service Worker: precache em ${cacheName} (${PRECACHE_URLS.length} recursos)`);
+  const cache = await caches.open(cacheName);
+  await cache.addAll(PRECACHE_URLS);
+  return cacheName;
+}
 
-// Instalação e cache inicial
+// Instalação e cache inicial.
+// ATENÇÃO: sem skipWaiting() aqui — a ativação de um novo SW é decidida pela
+// página (o overlay de atualização obrigatória envia SKIP_WAITING). Na primeira
+// visita (sem controller ativo) o SW ativa automaticamente após o install.
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
-  );
+  event.waitUntil(precache());
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => Promise.all(
-      keys.map((key) => {
-        if (key !== CACHE_NAME) return caches.delete(key);
-      })
-    )).then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const current = await getCacheName();
+    const keys = await caches.keys();
+    await Promise.all(keys.map((key) => {
+      if (key !== current) return caches.delete(key);
+    }));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('fetch', (event) => {
@@ -50,6 +67,10 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const reqUrl = new URL(event.request.url);
   if (reqUrl.origin !== location.origin) return;
+
+  // manifest.json sempre da rede: a página o usa para detectar novas versões
+  // (se viesse do cache, a verificação de versão nunca veria a nova release)
+  if (reqUrl.pathname === '/manifest.json') return;
 
   // Chamadas de API: sempre rede, sem cache e sem fallback em HTML.
   // Offline, responde um JSON de erro que o frontend consegue tratar.
@@ -67,6 +88,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith((async () => {
+    const cacheName = await getCacheName();
     const cached = await caches.match(event.request);
     if (cached) return cached;
 
@@ -76,7 +98,7 @@ self.addEventListener('fetch', (event) => {
       if (['image', 'script', 'style', 'document'].includes(dest) && response.ok) {
         // attempt to cache in background, but guard clone errors
         try {
-          const cache = await caches.open(CACHE_NAME);
+          const cache = await caches.open(cacheName);
           await cache.put(event.request, response.clone());
         } catch (err) {
           // cloning or cache.put can fail for opaque responses or once-used bodies; ignore
@@ -104,12 +126,13 @@ self.addEventListener('message', (event) => {
   }
 
   // Limpeza de emergência: apaga todos os caches e refaz o precache
+  // (re-derivando o nome do cache, pois a versão pode ter mudado)
   if (event.data.type === 'CLEAR_CACHE') {
     event.waitUntil((async () => {
       const keys = await caches.keys();
       await Promise.all(keys.map((key) => caches.delete(key)));
-      const cache = await caches.open(CACHE_NAME);
-      await cache.addAll(PRECACHE_URLS);
+      cacheNamePromise = null;
+      await precache();
       if (event.ports && event.ports[0]) {
         event.ports[0].postMessage({ cleared: true });
       }

@@ -137,6 +137,18 @@
         </div>
     </div>
 
+    <!-- Mandatory Update Overlay (não pode ser fechado) -->
+    <div id="update-overlay" class="update-overlay hidden" role="alertdialog" aria-modal="true" aria-labelledby="update-title">
+        <div class="update-card">
+            <span class="update-icon"><i class="ri-refresh-line"></i></span>
+            <h2 id="update-title">Nova versão disponível!</h2>
+            <p>Para continuar usando o Cadê o Circular, é necessário atualizar para a versão mais recente.</p>
+            <button id="update-now-btn" class="btn btn--primary update-btn">
+                <i class="ri-download-cloud-line"></i> Atualizar agora
+            </button>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

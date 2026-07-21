@@ -1,7 +1,7 @@
 # 🚌 Cadê o Circular - Monitor Ônibus USP Butantã
 
 ![USP Bus Monitor](https://img.shields.io/badge/Status-Ativo-success?style=flat)
-![Version](https://img.shields.io/badge/Version-0.1-blue?style=flat)
+![Version](https://img.shields.io/badge/Version-0.2.1-blue?style=flat)
 ![API](https://img.shields.io/badge/API-SPTrans-orange?style=flat)
 
 ## 🎯 Sobre o Projeto
@@ -10,7 +10,7 @@ Sistema web para monitoramento em tempo real das **principais linhas de ônibus*
 
 ## ✨ Funcionalidades Principais
 
-- 🚌 **Rastreamento em Tempo Real** - Posições atualizadas a cada 30 segundos
+- 🚌 **Rastreamento em Tempo Real** - Posições atualizadas a cada 10 segundos
 - 🗺️ **Mapa Interativo** - Interface intuitiva com Leaflet.js
 - 📍 **Geolocalização** - Encontre sua posição atual
 - 🎨 **Temas Claro/Escuro** - Interface adaptável
@@ -43,7 +43,7 @@ Sistema web para monitoramento em tempo real das **principais linhas de ônibus*
 🚌 Linhas Ativas: 6 principais da USP
 📡 API: SPTrans Olho Vivo v2.1  
 ⚡ Performance: ~64KB total
-🔄 Atualizações: Tempo real (30s)
+🔄 Atualizações: Tempo real (10s)
 🎯 Foco: Cidade Universitária USP
 ```
 

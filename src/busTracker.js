@@ -1,4 +1,4 @@
-import { isValidCoordinate, calculateOptimalZoom, formatTimeLocale, calculateBusDirection } from './utils.js';
+import { isValidCoordinate, calculateOptimalZoom, formatTimeLocale, calculateBusDirection, getThemeAwareColor } from './utils.js';
 import { markerIconHtml, busPopupHtml, renderBusLineItemHtml, userLocationMarkerHtml, userLocationPopupHtml, stopMarkerHtml } from './uiHelpers.js';
 import MapManager from './mapManager.js';
 import { stopCoords, lineStops } from './stopsData.js';
@@ -9,9 +9,8 @@ export default class BusTracker {
   constructor(options = {}) {
     this.apiConfig = Object.assign({
       baseUrl: window.location.origin + '/api',
-      // 30s: a SPTrans atualiza as posições em ciclos de ~30s, então
-      // intervalos menores só geram tráfego sem dados mais novos
-      updateInterval: 30000,
+      // 10s entre atualizações; a barra de progresso lê este mesmo valor
+      updateInterval: 10000,
       retryAttempts: 3
     }, options.apiConfig || {});
     this.busLines = options.busLines || [];
@@ -158,6 +157,9 @@ export default class BusTracker {
       const icon = document.querySelector('.theme-icon');
       if (icon) icon.innerHTML = newTheme === 'dark' ? '<i class="ri-sun-fill"></i>' : '<i class="ri-moon-fill"></i>';
 
+      // Recolore marcadores, rotas e indicadores para o novo tema
+      this.refreshThemeColors();
+
       const themeMessage = newTheme === 'dark' ? 'Tema escuro ativado! <i class="ri-moon-fill"></i>' : 'Tema claro ativado! <i class="ri-sun-fill"></i>';
       this.showToast('success', themeMessage);
     });
@@ -269,9 +271,6 @@ export default class BusTracker {
   // Atualiza o marcador do usuário. Retorna true em caso de sucesso.
   // `center: true` também move a visão do mapa (usado na ativação manual).
   async updateUserLocation({ center = false } = {}) {
-    const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
-    const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
-
     // maximumAge baixo para que as leituras do rastreamento sejam frescas
     const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 };
 
@@ -292,7 +291,7 @@ export default class BusTracker {
         iconHtml: userLocationMarkerHtml(),
         iconSize: [20, 20],
         iconAnchor: [10, 10],
-        popupHtml: userLocationPopupHtml(latitude, longitude, accuracy, compensateFilter)
+        popupHtml: userLocationPopupHtml(latitude, longitude, accuracy)
       });
 
       if (center) {
@@ -430,8 +429,6 @@ export default class BusTracker {
   const lineConfig = this.busLines.find(line => line.code === lineCode);
   if (!lineConfig) return;
 
-  const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
-  const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
   const prefix = `${lineCode}-bus-`;
   const seen = new Set();
 
@@ -442,7 +439,8 @@ export default class BusTracker {
 
     const direction = calculateBusDirection(this.busPositions, busId, bus.py, bus.px);
     const sentidoInfo = bus.sl ? ` (Sentido ${bus.sl})` : '';
-    const iconHtml = `<div class="bus-marker">${markerIconHtml(lineConfig, lineCode, compensateFilter, direction)}</div>`;
+    const iconHtml = `<div class="bus-marker">${markerIconHtml(lineConfig, lineCode, direction)}</div>`;
+    const popupHtml = busPopupHtml(lineConfig, lineCode, bus, sentidoInfo);
 
     const existing = this.mapManager.markers.get(markerId);
     if (existing) {
@@ -450,13 +448,13 @@ export default class BusTracker {
       existing.setLatLng([bus.py, bus.px]);
       existing.setIcon(this.mapManager.createDivIcon({ html: iconHtml, iconSize: [24, 24] }));
       if (existing.getPopup()) {
-        existing.setPopupContent(busPopupHtml(lineConfig, lineCode, bus, compensateFilter, sentidoInfo));
+        existing.setPopupContent(popupHtml);
       }
     } else {
       this.mapManager.addMarker(markerId, bus.py, bus.px, {
         iconHtml,
         iconSize: [24, 24],
-        popupHtml: busPopupHtml(lineConfig, lineCode, bus, compensateFilter, sentidoInfo)
+        popupHtml
       });
     }
   });
@@ -487,15 +485,14 @@ export default class BusTracker {
     if (!lineConfig) return;
     const stopsForLine = lineStops[lineCode] || [];
 
-    const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
-    const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
+    const stopColor = getThemeAwareColor(lineConfig.color);
 
     stopsForLine.forEach(stopId => {
       const stop = stopCoords[stopId];
       if (!stop || !isFinite(stop.lat) || !isFinite(stop.lon)) return;
       const markerId = `${lineCode}-stop-${stopId}`;
       this.mapManager.addMarker(markerId, stop.lat, stop.lon, {
-        iconHtml: stopMarkerHtml(stop, lineConfig.color, compensateFilter),
+        iconHtml: stopMarkerHtml(stop, stopColor),
         iconSize: [14, 14],
         iconAnchor: [7, 7],
         popupHtml: `<div class=\"stop-popup\"><strong>${stop.name}</strong><br><small>ID: ${stopId}</small></div>`
@@ -522,7 +519,7 @@ export default class BusTracker {
           if (!latlngs || latlngs.length === 0) return;
           const lineConfig = this.busLines.find(l => l.code === lineCode) || { color: '#3388ff' };
           const polyId = `${lineCode}-shape-${sid}-${idx}`;
-          this.mapManager.addPolyline(polyId, latlngs, { className: 'map-polyline', color: lineConfig.color || '#3388ff', weight: 4, opacity: 0.8 });
+          this.mapManager.addPolyline(polyId, latlngs, { className: 'map-polyline', color: getThemeAwareColor(lineConfig.color || '#3388ff'), weight: 4, opacity: 0.8 });
         });
       } catch (e) {
         console.error('Erro ao desenhar shapes para linha', lineCode, e);
@@ -583,6 +580,37 @@ export default class BusTracker {
       }
     }
     totalBuses.textContent = busCount;
+    }
+  }
+
+  // Reaplica as cores do tema atual em rotas, paradas, indicadores da
+  // sidebar e marcadores de ônibus (chamado ao alternar claro/escuro).
+  refreshThemeColors() {
+    // Polylines (shapes das rotas)
+    for (const [id, poly] of this.mapManager.polylines) {
+      const lineCode = id.split('-shape-')[0];
+      const lineConfig = this.busLines.find(l => l.code === lineCode);
+      if (lineConfig) {
+        poly.setStyle({ color: getThemeAwareColor(lineConfig.color || '#3388ff') });
+      }
+    }
+
+    // Marcadores de paradas das linhas ativas
+    for (const lineCode of this.activeBusLines) {
+      this.mapManager.removeMarkersByPrefix(`${lineCode}-stop-`);
+      try { this.addStopMarkers(lineCode); } catch (e) { console.error('Erro ao recolorir paradas:', e); }
+    }
+
+    // Indicadores de cor na sidebar (preserva o estado dos checkboxes)
+    this.renderBusLines();
+    document.querySelectorAll('input[data-line]').forEach(checkbox => {
+      checkbox.checked = this.activeBusLines.has(checkbox.dataset.line);
+    });
+
+    // Marcadores de ônibus: força um refresh (o proxy responde do cache,
+    // então não gera chamada upstream adicional)
+    if (this.activeBusLines.size > 0) {
+      this.refreshActiveLines();
     }
   }
 

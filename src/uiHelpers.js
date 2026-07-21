@@ -1,16 +1,22 @@
 // UI helper functions for rendering HTML snippets used by BusTracker
-export function markerIconHtml(lineConfig, lineCode, compensateFilter = '', direction = 0) {
+import { getThemeAwareColor } from './utils.js';
+
+export function markerIconHtml(lineConfig, lineCode, direction = 0) {
   const shortCode = lineCode.split('-')[0].slice(-2);
   const rotationStyle = `transform: rotate(${direction}deg);`;
+  // No tema escuro usa a versão vibrante da cor da linha
+  const lineColor = getThemeAwareColor(lineConfig.color);
   
-  // Cores baseadas no tema
+  // Texto preto no tema escuro (sobre a cor vibrante clara do marcador).
+  // A borda é sempre branca: no mapa escuro ela destaca o marcador e no
+  // claro mantém a aparência original.
   const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
   const textColor = isDark ? '#000' : '#fff';
-  const strokeColor = isDark ? '#000' : '#fff';
+  const strokeColor = '#fff';
   const shadowOpacity = isDark ? '0.6' : '0.3';
   
   return `
-    <div class="bus-marker-svg" style="${compensateFilter}; position: relative;">
+    <div class="bus-marker-svg" style="position: relative;">
       <div style="${rotationStyle}">
         <svg width="27" height="32" viewBox="0 0 65 65" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -21,7 +27,7 @@ export function markerIconHtml(lineConfig, lineCode, compensateFilter = '', dire
 
           <!-- Corpo da gota -->
           <path d="M31.993 2C20.563 17.624 14 32.007 14 43.827C14 53.859 22.064 62 32.001 62C41.946 62 50 53.859 50 43.827C50 32.007 43.245 17.383 31.993 2z"
-                fill="${lineConfig.color}" 
+                fill="${lineColor}" 
                 stroke="${strokeColor}" 
                 stroke-width="2" 
                 filter="url(#shadow-${shortCode})"/>
@@ -44,7 +50,7 @@ export function markerIconHtml(lineConfig, lineCode, compensateFilter = '', dire
   `;
 }
 
-export function busPopupHtml(lineConfig, lineCode, bus, compensateFilter = '', sentidoInfo = '') {
+export function busPopupHtml(lineConfig, lineCode, bus, sentidoInfo = '') {
   // Mapeamento de sentidos por linha
   const sentidoMapping = {
     '8082': { '1': 'Butantã', '2': 'P3' },
@@ -81,7 +87,7 @@ export function busPopupHtml(lineConfig, lineCode, bus, compensateFilter = '', s
   
   return `
     <div class="bus-popup">
-      <h5 class="bus-popup-title" style="color: ${lineConfig.color}; ${compensateFilter}">
+      <h5 class="bus-popup-title" style="color: ${getThemeAwareColor(lineConfig.color)}">
         ${lineConfig.name}
       </h5>
       <p>
@@ -105,7 +111,7 @@ export function renderBusLineItemHtml(line) {
           <div class="bus-line-code">${line.code}</div>
           <div class="bus-line-name">${line.name}</div>
         </div>
-        <div class="line-color-indicator" style="background-color: ${line.color}"></div>
+        <div class="line-color-indicator" style="background-color: ${getThemeAwareColor(line.color)}"></div>
       `;
 }
 
@@ -113,13 +119,13 @@ export function userLocationMarkerHtml() {
   return `<div class="user-location-inner"></div>`;
 }
 
-export function userLocationPopupHtml(lat, lng, accuracy, compensateFilter = '') {
-  return `<div class="user-location-popup"><strong style="${compensateFilter}"><i class="ri-map-pin-fill"></i> Você está aqui!</strong><br><small>Precisão: ≈${Math.round(accuracy)}m</small><br><small>Latitude: ${lat.toFixed(2)}</small><br><small>Longitude: ${lng.toFixed(2)}</small></div>`;
+export function userLocationPopupHtml(lat, lng, accuracy) {
+  return `<div class="user-location-popup"><strong><i class="ri-map-pin-fill"></i> Você está aqui!</strong><br><small>Precisão: ≈${Math.round(accuracy)}m</small><br><small>Latitude: ${lat.toFixed(2)}</small><br><small>Longitude: ${lng.toFixed(2)}</small></div>`;
 }
 
-export function stopMarkerHtml(stop, lineColor, compensateFilter = '') {
-  // small dot with optional tooltip color
+export function stopMarkerHtml(stop, lineColor) {
+  // small dot; a cor já vem adaptada ao tema pelo caller
   const color = lineColor || '#333';
   const name = (stop && stop.name) ? stop.name : '';
-  return `<div class="stop-marker-outer" style="${compensateFilter}"><div class="stop-marker-inner" style="background:${color};border:2px solid #fff;border-radius:50%;width:10px;height:10px;box-shadow:0 0 2px rgba(0,0,0,0.4)"></div></div><div class="stop-marker-popup">${name}</div>`;
+  return `<div class="stop-marker-outer"><div class="stop-marker-inner" style="background:${color};border:2px solid #fff;border-radius:50%;width:10px;height:10px;box-shadow:0 0 2px rgba(0,0,0,0.4)"></div></div><div class="stop-marker-popup">${name}</div>`;
 }

@@ -143,9 +143,13 @@
 
 }
 
-/* Filtro para mapa no modo escuro - fora do :root */
-[data-color-scheme="dark"] #map {
-  filter: invert(100%) hue-rotate(10deg) contrast(0.8) brightness(1.0);
+/* Mapa escuro: o filtro é aplicado APENAS aos tiles (ruas/áreas).
+   Marcadores, rotas e popups ficam fora do filtro e mantêm suas cores
+   verdadeiras no tema escuro.
+   (equivalente combinado dos filtros antigos empilhados:
+   invert(100%) hue-rotate(10+180deg) contrast(0.8*0.9) brightness(0.95)) */
+[data-color-scheme="dark"] .leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(190deg) contrast(72%) brightness(95%);
 }
 
 /* Dark mode colors */
@@ -1422,15 +1426,14 @@ body {
     color: var(--color-gray-200) !important;
 }
 
-[data-color-scheme="dark"] .leaflet-layer,
-.leaflet-control-zoom-in,
-.leaflet-control-zoom-out,
-.leaflet-control-attribution {
-  filter: 
-    /* invert(100%)  */
-    hue-rotate(180deg) 
-    brightness(95%) 
-    contrast(90%);
+/* Controles do mapa no tema escuro (sem filtros de cor) */
+[data-color-scheme="dark"] .leaflet-control-attribution {
+  background: rgba(31, 33, 33, 0.8);
+  color: var(--color-gray-300);
+}
+
+[data-color-scheme="dark"] .leaflet-control-attribution a {
+  color: var(--color-teal-300);
 }
 
 [data-color-scheme="dark"] .leaflet-control-zoom a:hover {
@@ -1443,13 +1446,21 @@ body {
     color: var(--color-slate-900) !important;
 }
 
-body[data-color-scheme='dark'] .map-polyline {
-  filter: hue-rotate(180deg);
+/* Rotas (polylines) mantêm as cores verdadeiras em ambos os temas —
+   o filtro hue-rotate que compensava a inversão do #map foi removido. */
+
+/* Popups no tema escuro (antes eram escurecidos pelo filtro do #map) */
+[data-color-scheme="dark"] .leaflet-popup-content-wrapper {
+  background: var(--color-charcoal-800);
+  color: var(--color-gray-200);
 }
 
-/* Opcional: remove o filtro no modo light */
-body[data-color-scheme='light'] .map-polyline {
-  filter: none;
+[data-color-scheme="dark"] .leaflet-popup-tip {
+  background: var(--color-charcoal-800);
+}
+
+[data-color-scheme="dark"] .leaflet-popup-close-button {
+  color: var(--color-gray-300) !important;
 }
 
 /* Accessibility improvements */
@@ -1559,4 +1570,60 @@ button:focus-visible {
 
 .control-btn.tracking-active:hover {
   background: var(--color-primary-hover);
+}
+
+/* Overlay de atualização obrigatória: ocupa a tela inteira e não pode ser
+   fechado — a única ação disponível é confirmar a atualização. */
+.update-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: rgba(19, 22, 22, 0.92);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-24);
+}
+
+.update-overlay.hidden {
+  display: none;
+}
+
+.update-card {
+  text-align: center;
+  max-width: 360px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: var(--radius-lg);
+  padding: var(--space-32, 32px) var(--space-24);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.update-icon {
+  display: inline-block;
+  font-size: 48px;
+  line-height: 1;
+  color: var(--color-primary);
+  animation: update-spin 2s linear infinite;
+}
+
+@keyframes update-spin {
+  to { transform: rotate(360deg); }
+}
+
+.update-card h2 {
+  margin: var(--space-16) 0 var(--space-8, 8px);
+  font-size: var(--font-size-xl, 20px);
+}
+
+.update-card p {
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-24);
+  font-size: var(--font-size-base, 14px);
+}
+
+.update-btn {
+  width: 100%;
+  justify-content: center;
 }
