@@ -266,6 +266,74 @@ app.get('/api/lines/:code/positions', ensureAuthenticated, async (req, res) => {
   }
 });
 
+// Previsão de chegada por parada (GET /Previsao/Parada da documentação oficial).
+// Cache curto por parada: N usuários na mesma parada = 1 chamada upstream.
+const arrivalsCache = new Map(); // stopId -> { at, payload }
+const ARRIVALS_TTL_MS = 20000;
+
+app.get('/api/stops/:stopId/arrivals', (req, res, next) => {
+  if (!/^\d+$/.test(req.params.stopId)) {
+    return res.status(400).json({ error: 'codigoParada inválido', stopId: req.params.stopId });
+  }
+  next();
+}, ensureAuthenticated, async (req, res) => {
+  const { stopId } = req.params;
+
+  try {
+    const cached = arrivalsCache.get(stopId);
+    if (cached && Date.now() - cached.at < ARRIVALS_TTL_MS) {
+      return res.json(cached.payload);
+    }
+
+    const response = await fetchWithAuth(`${SPTRANS_BASE_URL}/Previsao/Parada?codigoParada=${stopId}`);
+
+    if (!response.ok) {
+      throw new Error(`SPTrans /Previsao/Parada retornou HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // p é null quando a parada não é encontrada na API
+    const payload = {
+      success: true,
+      hr: data.hr || null, // horário de referência das previsões
+      stop: data.p
+        ? { cp: data.p.cp, np: data.p.np, py: data.p.py, px: data.p.px }
+        : null,
+      lines: data.p && Array.isArray(data.p.l)
+        ? data.p.l.map((line) => ({
+            c: line.c,           // letreiro completo (ex.: "8082-10")
+            cl: line.cl,         // código identificador da linha
+            sl: line.sl,         // sentido
+            destino: line.lt0,
+            origem: line.lt1,
+            veiculos: (Array.isArray(line.vs) ? line.vs : []).map((v) => ({
+              p: v.p,            // prefixo do veículo
+              t: v.t,            // horário previsto de chegada na parada
+              a: !!v.a           // acessível
+            }))
+          }))
+        : [],
+      timestamp: new Date().toISOString()
+    };
+
+    arrivalsCache.set(stopId, { at: Date.now(), payload });
+    // Evicção simples: remove a entrada mais antiga quando o cache cresce demais
+    if (arrivalsCache.size > 100) {
+      arrivalsCache.delete(arrivalsCache.keys().next().value);
+    }
+
+    res.json(payload);
+  } catch (error) {
+    console.error(`❌ Erro ao buscar previsão da parada ${stopId}:`, error.message);
+    res.status(502).json({
+      error: error.message,
+      stopId,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Busca de linhas por termo (GET /Linha/Buscar da documentação oficial)
 app.get('/api/lines/search', ensureAuthenticated, async (req, res) => {
   try {

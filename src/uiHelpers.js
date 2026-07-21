@@ -123,6 +123,17 @@ export function userLocationPopupHtml(lat, lng, accuracy) {
   return `<div class="user-location-popup"><strong><i class="ri-map-pin-fill"></i> Você está aqui!</strong><br><small>Precisão: ≈${Math.round(accuracy)}m</small><br><small>Latitude: ${lat.toFixed(2)}</small><br><small>Longitude: ${lng.toFixed(2)}</small></div>`;
 }
 
+export function stopPopupHtml(stop, stopId, pinned = false, lineCode = '') {
+  const name = (stop && stop.name) ? stop.name : '';
+  return `<div class="stop-popup">
+    <strong>${name}</strong><br>
+    <small>ID: ${stopId}</small><br>
+    <button class="stop-pin-btn" data-stop-id="${stopId}" data-line-code="${lineCode}">
+      <i class="${pinned ? 'ri-pushpin-fill' : 'ri-pushpin-line'}"></i> ${pinned ? 'Desafixar parada' : 'Fixar parada'}
+    </button>
+  </div>`;
+}
+
 export function stopMarkerHtml(stop, lineColor) {
   // small dot; a cor já vem adaptada ao tema pelo caller
   const color = lineColor || '#333';

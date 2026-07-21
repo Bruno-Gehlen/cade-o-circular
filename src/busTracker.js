@@ -1,5 +1,5 @@
-import { isValidCoordinate, calculateOptimalZoom, formatTimeLocale, calculateBusDirection, getThemeAwareColor, buildShapeSegments, directionFromShapeSegments } from './utils.js';
-import { markerIconHtml, busPopupHtml, renderBusLineItemHtml, userLocationMarkerHtml, userLocationPopupHtml, stopMarkerHtml } from './uiHelpers.js';
+import { isValidCoordinate, calculateOptimalZoom, formatTimeLocale, calculateBusDirection, getThemeAwareColor, buildShapeSegments, directionFromShapeSegments, distanceMeters, minutesBetweenTimes } from './utils.js';
+import { markerIconHtml, busPopupHtml, renderBusLineItemHtml, userLocationMarkerHtml, userLocationPopupHtml, stopMarkerHtml, stopPopupHtml } from './uiHelpers.js';
 import MapManager from './mapManager.js';
 import { stopCoords, lineStops } from './stopsData.js';
 import shapesData from './shapesData.js';
@@ -26,6 +26,11 @@ export default class BusTracker {
     this.userLocationMarker = null;
     this.locationTracking = false;
     this._locationTimer = null;
+    this.userLocation = null;      // { lat, lng } da última leitura conhecida
+    this.pinnedStop = null;        // parada fixada pelo usuário { id, name, lat, lon, lineCode }
+    this._nearestStop = null;      // parada de referência atual (fixada ou mais próxima)
+    this._nearestArrivals = null;  // última resposta de previsão da parada
+    this._lastArrivalsFetch = 0;
     this._updateTimer = null;
     this._nextUpdateAt = null;
     this._progressTimer = null;
@@ -179,7 +184,14 @@ export default class BusTracker {
     });
     
     document.getElementById('panel-toggle')?.addEventListener('click', () => {
-        document.getElementById('bottom-panel')?.classList.toggle('collapsed');
+        const panel = document.getElementById('bottom-panel');
+        panel?.classList.toggle('collapsed');
+        // Ao abrir o painel: redesenha a linha tracejada e atualiza a previsão
+        if (panel && !panel.classList.contains('collapsed')) {
+          this.updateNearestStopInfo({ forceFetch: true });
+        } else {
+          this.updateNearestStopLine();
+        }
     });
 
     document.getElementById('select-all-btn')?.addEventListener('click', () => {
@@ -205,6 +217,14 @@ export default class BusTracker {
     document.addEventListener('change', (e) => {
       if (e.target.matches && e.target.matches('input[data-line]')) {
         this.toggleBusLine(e.target.dataset.line, e.target.checked);
+      }
+    });
+
+    // Delegação de eventos: botão "Fixar parada" nos popups das paradas
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest && e.target.closest('.stop-pin-btn');
+      if (btn) {
+        this.togglePinnedStop(btn.dataset.stopId, btn.dataset.lineCode);
       }
     });
 
@@ -303,6 +323,8 @@ export default class BusTracker {
         this.showToast('success', `Te achei! ${accuracyText}! <i class="ri-map-pin-fill"></i>`);
       }
       console.log(`🎯 Localização obtida: ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${Math.round(accuracy)}m)`);
+      this.userLocation = { lat: latitude, lng: longitude };
+      this.updateNearestStopInfo();
       return true;
     } catch (error) {
       let errorMessage = 'Erro ao obter localização <i class="ri-map-pin-fill"></i>';
@@ -426,6 +448,195 @@ export default class BusTracker {
     }
   }
 
+  // Fixa/desafixa uma parada como referência para a linha tracejada e a
+  // previsão de chegada (ativado pelo botão no popup da parada)
+  togglePinnedStop(stopId, lineCode) {
+    const stop = stopCoords[stopId];
+    if (!stop) return;
+
+    if (this.pinnedStop && this.pinnedStop.id === stopId) {
+      this.pinnedStop = null;
+      this.showToast('success', 'Parada desafixada');
+    } else {
+      this.pinnedStop = { id: stopId, name: stop.name, lat: stop.lat, lon: stop.lon, lineCode };
+      this.showToast('success', `Parada fixada: ${stop.name} <i class="ri-pushpin-fill"></i>`);
+    }
+
+    this.refreshStopPopups();
+    this.updateNearestStopInfo({ forceFetch: true });
+  }
+
+  // Atualiza o conteúdo dos popups das paradas para refletir o estado de fixação
+  refreshStopPopups() {
+    for (const [markerId, marker] of this.mapManager.markers) {
+      if (!markerId.includes('-stop-')) continue;
+      const [lineCode, stopId] = markerId.split('-stop-');
+      const stop = stopCoords[stopId];
+      if (!stop) continue;
+      marker.setPopupContent(stopPopupHtml(stop, stopId, this.pinnedStop?.id === stopId, lineCode));
+    }
+  }
+
+  // Encontra a parada mais próxima da localização do usuário, considerando
+  // apenas as paradas das linhas ativas. Sem linhas ativas, retorna null.
+  findNearestStop(userLat, userLng) {
+    if (this.activeBusLines.size === 0) return null;
+
+    let stopIds = [];
+    for (const code of this.activeBusLines) {
+      stopIds.push(...(lineStops[code] || []));
+    }
+    if (stopIds.length === 0) return null;
+
+    let best = null;
+    let bestDist = Infinity;
+    for (const id of stopIds) {
+      const stop = stopCoords[id];
+      if (!stop || !isFinite(stop.lat) || !isFinite(stop.lon)) continue;
+      const d = distanceMeters(userLat, userLng, stop.lat, stop.lon);
+      if (d < bestDist) {
+        bestDist = d;
+        best = { id, name: stop.name, lat: stop.lat, lon: stop.lon, distance: d };
+      }
+    }
+    return best;
+  }
+
+  // Atualiza a stat de "chegada na parada mais próxima" e a linha tracejada.
+  // A previsão é buscada no máximo 1x/minuto (ou quando a parada muda),
+  // exceto com forceFetch.
+  async updateNearestStopInfo({ forceFetch = false } = {}) {
+    const labelEl = document.getElementById('nearest-stop-label');
+    const valueEl = document.getElementById('nearest-arrival');
+    if (!labelEl || !valueEl) return;
+
+    if (!this.userLocation) {
+      this._nearestStop = null;
+      this._nearestArrivals = null;
+      labelEl.textContent = 'Parada mais próxima';
+      labelEl.title = '';
+      valueEl.textContent = 'Ative a localização';
+      this.updateNearestStopLine();
+      return;
+    }
+
+    // Se a parada fixada pertence a uma linha que foi desativada, desafixa
+    if (this.pinnedStop && !this.activeBusLines.has(this.pinnedStop.lineCode)) {
+      this.pinnedStop = null;
+      this.refreshStopPopups();
+    }
+
+    // Sem linhas selecionadas não há parada de referência: reseta a stat
+    // e remove a linha tracejada
+    if (this.activeBusLines.size === 0) {
+      this._nearestStop = null;
+      this._nearestArrivals = null;
+      labelEl.textContent = 'Parada mais próxima';
+      labelEl.title = '';
+      valueEl.textContent = 'Selecione uma linha';
+      this.updateNearestStopLine();
+      return;
+    }
+
+    // A parada de referência é a fixada pelo usuário, se houver; caso
+    // contrário, a mais próxima entre as paradas das linhas ativas
+    const stop = this.pinnedStop
+      ? { ...this.pinnedStop, distance: distanceMeters(this.userLocation.lat, this.userLocation.lng, this.pinnedStop.lat, this.pinnedStop.lon) }
+      : this.findNearestStop(this.userLocation.lat, this.userLocation.lng);
+    const stopChanged = !this._nearestStop || !stop || this._nearestStop.id !== stop.id;
+    this._nearestStop = stop;
+    if (stopChanged) this._nearestArrivals = null; // não exibir previsão da parada anterior
+    this.updateNearestStopLine();
+
+    if (!stop) {
+      labelEl.textContent = 'Parada mais próxima';
+      labelEl.title = '';
+      valueEl.textContent = '—';
+      return;
+    }
+
+    const pinIcon = this.pinnedStop ? '<i class="ri-pushpin-fill"></i> ' : '';
+    labelEl.innerHTML = `${pinIcon}${stop.name}`;
+    labelEl.title = `${this.pinnedStop ? 'Parada fixada · ' : ''}${stop.name} · ${Math.round(stop.distance)} m`;
+
+    const isStale = Date.now() - this._lastArrivalsFetch > 60000;
+    if (forceFetch || stopChanged || isStale || !this._nearestArrivals) {
+      this._lastArrivalsFetch = Date.now();
+      try {
+        const response = await fetch(`${this.apiConfig.baseUrl}/stops/${stop.id}/arrivals`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        this._nearestArrivals = await response.json();
+      } catch (error) {
+        console.warn('⚠️ Falha ao buscar previsão da parada:', error.message);
+        valueEl.textContent = 'indisponível';
+        return;
+      }
+    }
+    this.renderNearestArrival();
+  }
+
+  // Renderiza a menor previsão de chegada (filtrada pelas linhas ativas,
+  // quando houver) usando o horário de referência hr da própria API.
+  renderNearestArrival() {
+    const valueEl = document.getElementById('nearest-arrival');
+    if (!valueEl) return;
+    const data = this._nearestArrivals;
+    if (!data) { valueEl.textContent = '—'; return; }
+
+    let lines = Array.isArray(data.lines) ? data.lines : [];
+    if (this.activeBusLines.size > 0) {
+      const filtered = lines.filter(l => this.activeBusLines.has((l.c || '').split('-')[0]));
+      if (filtered.length > 0) lines = filtered;
+    }
+
+    let best = null;
+    for (const line of lines) {
+      for (const v of line.veiculos || []) {
+        const mins = minutesBetweenTimes(data.hr, v.t);
+        if (mins === null) continue;
+        if (!best || mins < best.mins) best = { mins, line: line.c, a: v.a };
+      }
+    }
+
+    if (!best) {
+      valueEl.textContent = 'sem previsão';
+    } else if (best.mins <= 0) {
+      valueEl.textContent = `chegando · ${best.line}`;
+    } else {
+      valueEl.textContent = `${best.mins} min · ${best.line}`;
+    }
+  }
+
+  // Linha tracejada entre o pin do usuário e a parada mais próxima.
+  // Só é desenhada enquanto o painel "Estatísticas em Tempo Real" está aberto.
+  updateNearestStopLine() {
+    const lineId = 'user-nearest-stop';
+    const panel = document.getElementById('bottom-panel');
+    const panelOpen = !!panel && !panel.classList.contains('collapsed');
+
+    if (panelOpen && this.userLocation && this._nearestStop) {
+      // Parada fixada usa a cor da própria linha; a automática usa teal
+      let color = getThemeAwareColor('#21808d');
+      if (this.pinnedStop) {
+        const lineConfig = this.busLines.find(l => l.code === this.pinnedStop.lineCode);
+        if (lineConfig) color = getThemeAwareColor(lineConfig.color);
+      }
+
+      this.mapManager.addPolyline(lineId, [
+        [this.userLocation.lat, this.userLocation.lng],
+        [this._nearestStop.lat, this._nearestStop.lon]
+      ], {
+        dashArray: '6 8',
+        color,
+        weight: 3,
+        opacity: 0.9,
+        className: 'nearest-stop-line'
+      });
+    } else {
+      this.mapManager.removePolyline(lineId);
+    }
+  }
+
   // Segmentos (com bearings pré-computados) de todos os shapes da linha,
   // usados para alinhar a rotação do marcador à via. Construído uma vez por linha.
   getShapeSegments(lineCode) {
@@ -528,7 +739,7 @@ export default class BusTracker {
         iconHtml: stopMarkerHtml(stop, stopColor),
         iconSize: [14, 14],
         iconAnchor: [7, 7],
-        popupHtml: `<div class=\"stop-popup\"><strong>${stop.name}</strong><br><small>ID: ${stopId}</small></div>`
+        popupHtml: stopPopupHtml(stop, stopId, this.pinnedStop?.id === stopId, lineCode)
       });
     });
   }
@@ -565,6 +776,9 @@ export default class BusTracker {
       this.mapManager.removePolylinesByPrefix(`${lineCode}-shape-`);
     }
     this.updateStats();
+    // A troca de linhas ativas muda o conjunto de paradas candidatas e o
+    // filtro da previsão — recalcula sem forçar fetch (respeita o rate limit)
+    this.updateNearestStopInfo();
   }
 
   // Atualiza os markers de todas as linhas ativas com uma única chamada
@@ -595,12 +809,10 @@ export default class BusTracker {
   }
 
   updateStats() {
-  const activeLines = document.getElementById('active-lines');
   const totalBuses = document.getElementById('total-buses');
   const lastUpdate = document.getElementById('last-update');
   
   if (lastUpdate) lastUpdate.textContent = `Atualizado às ${formatTimeLocale()}`;
-  if (activeLines) activeLines.textContent = this.activeBusLines.size;
   
   if (totalBuses) {
     let busCount = 0;
@@ -645,6 +857,9 @@ export default class BusTracker {
     if (this.activeBusLines.size > 0) {
       this.refreshActiveLines();
     }
+
+    // Linha tracejada usuário → parada também acompanha o tema
+    this.updateNearestStopLine();
   }
 
   updateConnectionStatus(status, message) {
@@ -685,6 +900,7 @@ export default class BusTracker {
       if (this.authenticated && this.activeBusLines.size > 0) {
         await this.refreshActiveLines();
       }
+      this.updateNearestStopInfo();
     };
 
     const scheduleNext = () => {

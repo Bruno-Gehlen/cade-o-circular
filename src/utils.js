@@ -82,6 +82,30 @@ export function getThemeAwareColor(hex) {
 const EARTH_M_PER_DEG_LAT = 110540;
 const EARTH_M_PER_DEG_LNG = 111320;
 
+// Distância em metros entre dois pontos (aproximação equiretangular,
+// suficiente para distâncias urbanas curtas).
+export function distanceMeters(lat1, lng1, lat2, lng2) {
+  const cosLat = Math.cos((lat1 * Math.PI) / 180);
+  const dx = (lng2 - lng1) * EARTH_M_PER_DEG_LNG * cosLat;
+  const dy = (lat2 - lat1) * EARTH_M_PER_DEG_LAT;
+  return Math.hypot(dx, dy);
+}
+
+// Diferença em minutos entre dois horários "HH:MM" (ex.: hr de referência e
+// t de previsão da API SPTrans). Lida com a virada do dia.
+export function minutesBetweenTimes(fromTime, toTime) {
+  const parse = (s) => {
+    const m = /^(\d{1,2}):(\d{2})/.exec(s || '');
+    return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+  };
+  const from = parse(fromTime);
+  const to = parse(toTime);
+  if (from === null || to === null) return null;
+  let diff = to - from;
+  if (diff < -720) diff += 1440;
+  return diff;
+}
+
 // Bearing (0–360, 0 = Norte) entre dois pontos, com correção de longitude
 // pela latitude (aproximação equiretangular, suficiente para curtas distâncias).
 export function bearingDegrees(lat1, lng1, lat2, lng2) {
