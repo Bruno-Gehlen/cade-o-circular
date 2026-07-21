@@ -266,9 +266,33 @@ app.get('/api/lines/:code/positions', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// Previsão de chegada por parada (GET /Previsao/Parada da documentação oficial).
-// Cache curto por parada: N usuários na mesma parada = 1 chamada upstream.
-const arrivalsCache = new Map(); // stopId -> { at, payload }
+// Cache letreiro → códigos cl (por sentido). Os códigos são estáveis,
+// então o cache é válido pelo tempo de vida do processo.
+const lineCodeCache = new Map(); // "8085" -> [{ cl, sl, c }]
+
+async function getLineCodes(letreiro) {
+  if (!lineCodeCache.has(letreiro)) {
+    const response = await fetchWithAuth(`${SPTRANS_BASE_URL}/Linha/Buscar?termosBusca=${letreiro}`);
+    if (!response.ok) {
+      throw new Error(`SPTrans /Linha/Buscar retornou HTTP ${response.status}`);
+    }
+    const lines = await response.json();
+    const codes = (Array.isArray(lines) ? lines : [])
+      .filter((l) => String(l.lt) === letreiro)
+      .map((l) => ({ cl: l.cl, sl: l.sl, c: `${l.lt}-${l.tl}` }));
+    lineCodeCache.set(letreiro, codes);
+  }
+  return lineCodeCache.get(letreiro);
+}
+
+// Previsão de chegada por parada. Dois modos:
+// - ?lines=8012,8085 → usa GET /Previsao?codigoParada&codigoLinha (documentado)
+//   para cada linha informada e mescla o resultado. É o modo usado pelo
+//   frontend: o endpoint agregado /Previsao/Parada nem sempre inclui as
+//   linhas circulares na cadeia de previsão.
+// - sem ?lines → GET /Previsao/Parada (todas as linhas da parada).
+// Cache curto por parada+linhas: N usuários iguais = 1 rodada upstream.
+const arrivalsCache = new Map(); // "stopId:lines" -> { at, payload }
 const ARRIVALS_TTL_MS = 20000;
 
 app.get('/api/stops/:stopId/arrivals', (req, res, next) => {
@@ -278,46 +302,98 @@ app.get('/api/stops/:stopId/arrivals', (req, res, next) => {
   next();
 }, ensureAuthenticated, async (req, res) => {
   const { stopId } = req.params;
+  const requestedLines = (req.query.lines || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => /^\d{4}$/.test(s));
 
   try {
-    const cached = arrivalsCache.get(stopId);
+    const cacheKey = `${stopId}:${requestedLines.slice().sort().join(',')}`;
+    const cached = arrivalsCache.get(cacheKey);
     if (cached && Date.now() - cached.at < ARRIVALS_TTL_MS) {
       return res.json(cached.payload);
     }
 
-    const response = await fetchWithAuth(`${SPTRANS_BASE_URL}/Previsao/Parada?codigoParada=${stopId}`);
+    let payload;
 
-    if (!response.ok) {
-      throw new Error(`SPTrans /Previsao/Parada retornou HTTP ${response.status}`);
+    if (requestedLines.length > 0) {
+      // Modo linha-específica: uma chamada /Previsao por cl (sentido) de cada linha
+      const perLine = await Promise.all(requestedLines.map(async (letreiro) => {
+        const codes = await getLineCodes(letreiro);
+        const results = await Promise.all(codes.map(async ({ cl, sl, c }) => {
+          const r = await fetchWithAuth(`${SPTRANS_BASE_URL}/Previsao?codigoParada=${stopId}&codigoLinha=${cl}`);
+          if (!r.ok) {
+            console.warn(`⚠️ /Previsao parada=${stopId} linha=${cl} → HTTP ${r.status}`);
+            return { hr: null, stop: null, line: null };
+          }
+          const d = await r.json();
+          const lineData = d.p && Array.isArray(d.p.l) && d.p.l.length > 0 ? d.p.l[0] : null;
+          return {
+            hr: d.hr || null,
+            stop: d.p ? { cp: d.p.cp, np: d.p.np, py: d.p.py, px: d.p.px } : null,
+            line: lineData
+              ? {
+                  c: lineData.c || c,
+                  cl: lineData.cl || cl,
+                  sl: lineData.sl ?? sl,
+                  destino: lineData.lt0,
+                  origem: lineData.lt1,
+                  veiculos: (Array.isArray(lineData.vs) ? lineData.vs : []).map((v) => ({
+                    p: v.p,
+                    t: v.t,
+                    a: !!v.a
+                  }))
+                }
+              : { c, cl, sl, destino: null, origem: null, veiculos: [] }
+          };
+        }));
+        return results;
+      }));
+
+      const flat = perLine.flat();
+      payload = {
+        success: true,
+        hr: flat.find((r) => r.hr)?.hr || null,
+        stop: flat.find((r) => r.stop)?.stop || null,
+        lines: flat.map((r) => r.line).filter(Boolean),
+        timestamp: new Date().toISOString()
+      };
+    } else {
+      // Modo agregado: GET /Previsao/Parada (todas as linhas da parada)
+      const response = await fetchWithAuth(`${SPTRANS_BASE_URL}/Previsao/Parada?codigoParada=${stopId}`);
+
+      if (!response.ok) {
+        throw new Error(`SPTrans /Previsao/Parada retornou HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // p é null quando a parada não é encontrada na API
+      payload = {
+        success: true,
+        hr: data.hr || null, // horário de referência das previsões
+        stop: data.p
+          ? { cp: data.p.cp, np: data.p.np, py: data.p.py, px: data.p.px }
+          : null,
+        lines: data.p && Array.isArray(data.p.l)
+          ? data.p.l.map((line) => ({
+              c: line.c,           // letreiro completo (ex.: "8082-10")
+              cl: line.cl,         // código identificador da linha
+              sl: line.sl,         // sentido
+              destino: line.lt0,
+              origem: line.lt1,
+              veiculos: (Array.isArray(line.vs) ? line.vs : []).map((v) => ({
+                p: v.p,            // prefixo do veículo
+                t: v.t,            // horário previsto de chegada na parada
+                a: !!v.a           // acessível
+              }))
+            }))
+          : [],
+        timestamp: new Date().toISOString()
+      };
     }
 
-    const data = await response.json();
-
-    // p é null quando a parada não é encontrada na API
-    const payload = {
-      success: true,
-      hr: data.hr || null, // horário de referência das previsões
-      stop: data.p
-        ? { cp: data.p.cp, np: data.p.np, py: data.p.py, px: data.p.px }
-        : null,
-      lines: data.p && Array.isArray(data.p.l)
-        ? data.p.l.map((line) => ({
-            c: line.c,           // letreiro completo (ex.: "8082-10")
-            cl: line.cl,         // código identificador da linha
-            sl: line.sl,         // sentido
-            destino: line.lt0,
-            origem: line.lt1,
-            veiculos: (Array.isArray(line.vs) ? line.vs : []).map((v) => ({
-              p: v.p,            // prefixo do veículo
-              t: v.t,            // horário previsto de chegada na parada
-              a: !!v.a           // acessível
-            }))
-          }))
-        : [],
-      timestamp: new Date().toISOString()
-    };
-
-    arrivalsCache.set(stopId, { at: Date.now(), payload });
+    arrivalsCache.set(cacheKey, { at: Date.now(), payload });
     // Evicção simples: remove a entrada mais antiga quando o cache cresce demais
     if (arrivalsCache.size > 100) {
       arrivalsCache.delete(arrivalsCache.keys().next().value);

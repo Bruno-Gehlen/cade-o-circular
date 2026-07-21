@@ -545,7 +545,9 @@ export default class BusTracker {
       : this.findNearestStop(this.userLocation.lat, this.userLocation.lng);
     const stopChanged = !this._nearestStop || !stop || this._nearestStop.id !== stop.id;
     this._nearestStop = stop;
-    if (stopChanged) this._nearestArrivals = null; // não exibir previsão da parada anterior
+    // Não exibir previsão da parada anterior; e se a parada fixada mudou de
+    // ID mas o fetch anterior era para outro cp, força nova busca
+    if (stopChanged) this._nearestArrivals = null;
     this.updateNearestStopLine();
 
     if (!stop) {
@@ -563,12 +565,22 @@ export default class BusTracker {
     if (forceFetch || stopChanged || isStale || !this._nearestArrivals) {
       this._lastArrivalsFetch = Date.now();
       try {
-        const response = await fetch(`${this.apiConfig.baseUrl}/stops/${stop.id}/arrivals`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        // Consulta apenas as linhas ativas que de fato atendem esta parada —
+        // o proxy usa GET /Previsao?codigoParada&codigoLinha para cada uma,
+        // que é o endpoint que inclui as previsões dos circulares
+        const servingLines = [...this.activeBusLines]
+          .filter(code => (lineStops[code] || []).includes(stop.id));
+        const query = servingLines.length > 0 ? `?lines=${servingLines.join(',')}` : '';
+        const response = await fetch(`${this.apiConfig.baseUrl}/stops/${stop.id}/arrivals${query}`);
+        if (!response.ok) {
+          // 404 = o proxy em execução não tem este endpoint (processo antigo)
+          if (response.status === 404) throw new Error('404');
+          throw new Error(`HTTP ${response.status}`);
+        }
         this._nearestArrivals = await response.json();
       } catch (error) {
         console.warn('⚠️ Falha ao buscar previsão da parada:', error.message);
-        valueEl.textContent = 'indisponível';
+        valueEl.textContent = error.message === '404' ? 'reinicie o proxy' : 'indisponível';
         return;
       }
     }
@@ -584,9 +596,10 @@ export default class BusTracker {
     if (!data) { valueEl.textContent = '—'; return; }
 
     let lines = Array.isArray(data.lines) ? data.lines : [];
+    // Mostra apenas as linhas ativas: a resposta já vem filtrada pelo proxy
+    // (modo ?lines=), mas o filtro local cobre o modo agregado
     if (this.activeBusLines.size > 0) {
-      const filtered = lines.filter(l => this.activeBusLines.has((l.c || '').split('-')[0]));
-      if (filtered.length > 0) lines = filtered;
+      lines = lines.filter(l => this.activeBusLines.has((l.c || '').split('-')[0]));
     }
 
     let best = null;
