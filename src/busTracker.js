@@ -9,7 +9,9 @@ export default class BusTracker {
   constructor(options = {}) {
     this.apiConfig = Object.assign({
       baseUrl: window.location.origin + '/api',
-      updateInterval: 15000,
+      // 30s: a SPTrans atualiza as posições em ciclos de ~30s, então
+      // intervalos menores só geram tráfego sem dados mais novos
+      updateInterval: 30000,
       retryAttempts: 3
     }, options.apiConfig || {});
     this.busLines = options.busLines || [];
@@ -22,6 +24,11 @@ export default class BusTracker {
     Object.keys(shapesData || {}).forEach(k => this.shapeCache.set(k, shapesData[k]));
     this.authenticated = false;
     this.userLocationMarker = null;
+    this.locationTracking = false;
+    this._locationTimer = null;
+    this._updateTimer = null;
+    this._nextUpdateAt = null;
+    this._progressTimer = null;
     this._savedUIState = null;
     this.init();
   }
@@ -156,7 +163,7 @@ export default class BusTracker {
     });
 
     document.getElementById('find-location')?.addEventListener('click', () => {
-      this.findUserLocation();
+      this.toggleUserLocation();
     });
 
     document.getElementById('center-usp')?.addEventListener('click', () => {
@@ -207,17 +214,66 @@ export default class BusTracker {
     });
   }
 
-  async findUserLocation() {
-    const button = document.getElementById('find-location');
-    const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
-    const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
+  // Liga/desliga o rastreamento contínuo da localização do usuário
+  async toggleUserLocation() {
+    if (this.locationTracking) {
+      this.stopLocationTracking();
+      this.showToast('success', 'Rastreamento desativado');
+      return;
+    }
+    await this.startLocationTracking();
+  }
 
+  async startLocationTracking() {
     if (!navigator.geolocation) {
       this.showToast('error', 'Geolocalização não suportada pelo navegador');
       return;
     }
 
-    const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 };
+    // Primeira leitura: centraliza o mapa no usuário
+    const success = await this.updateUserLocation({ center: true });
+    if (!success) return; // erro já tratado em updateUserLocation
+
+    this.locationTracking = true;
+    this.updateLocationButtonState(true);
+    this.showToast('success', 'Rastreamento ativado! <i class="ri-navigation-fill"></i>');
+
+    this.startLocationTimer();
+  }
+
+  stopLocationTracking() {
+    this.locationTracking = false;
+    if (this._locationTimer) {
+      clearInterval(this._locationTimer);
+      this._locationTimer = null;
+    }
+    this.updateLocationButtonState(false);
+  }
+
+  startLocationTimer() {
+    if (this._locationTimer) clearInterval(this._locationTimer);
+    this._locationTimer = setInterval(() => {
+      this.updateUserLocation({ center: false });
+    }, 15000);
+  }
+
+  updateLocationButtonState(active) {
+    const button = document.getElementById('find-location');
+    if (!button) return;
+    button.classList.toggle('tracking-active', active);
+    button.innerHTML = active
+      ? '<span><i class="ri-navigation-fill"></i></span><span class="btn-text">Rastreando...</span>'
+      : '<span><i class="ri-map-pin-fill"></i></span><span class="btn-text">Minha Localização</span>';
+  }
+
+  // Atualiza o marcador do usuário. Retorna true em caso de sucesso.
+  // `center: true` também move a visão do mapa (usado na ativação manual).
+  async updateUserLocation({ center = false } = {}) {
+    const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
+    const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
+
+    // maximumAge baixo para que as leituras do rastreamento sejam frescas
+    const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 };
 
     try {
       const position = await new Promise((resolve, reject) => {
@@ -239,12 +295,15 @@ export default class BusTracker {
         popupHtml: userLocationPopupHtml(latitude, longitude, accuracy, compensateFilter)
       });
 
-      const zoom = calculateOptimalZoom(accuracy);
-      this.mapManager.setView([latitude, longitude], zoom);
+      if (center) {
+        const zoom = calculateOptimalZoom(accuracy);
+        this.mapManager.setView([latitude, longitude], zoom);
 
-      const accuracyText = accuracy < 50 ? 'Alta precisão' : accuracy < 200 ? 'Boa precisão' : 'Precisão aproximada';
-      this.showToast('success', `Te achei! ${accuracyText}! <i class="ri-map-pin-fill"></i>`);
+        const accuracyText = accuracy < 50 ? 'Alta precisão' : accuracy < 200 ? 'Boa precisão' : 'Precisão aproximada';
+        this.showToast('success', `Te achei! ${accuracyText}! <i class="ri-map-pin-fill"></i>`);
+      }
       console.log(`🎯 Localização obtida: ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${Math.round(accuracy)}m)`);
+      return true;
     } catch (error) {
       let errorMessage = 'Erro ao obter localização <i class="ri-map-pin-fill"></i>';
       if (error && error.code) {
@@ -262,14 +321,20 @@ export default class BusTracker {
             errorMessage = `Erro na localização: ${error.message}`;
         }
       }
-      this.showToast('error', errorMessage);
-      console.error('❌ Erro geolocalização:', error);
-    } finally {
-      if (button) {
-        button.disabled = false;
-        button.innerHTML = '<span><i class="ri-map-pin-fill"></i></span><span class="btn-text">Minha Localização</span>';
-        button.classList.remove('loading');
+
+      // Permissão revogada/negada: desliga o rastreamento. Erros transitórios
+      // (timeout/indisponível) durante o rastreamento só são logados para não
+      // spammear toasts a cada 15s.
+      if (error && error.code === 1) {
+        this.stopLocationTracking();
+        this.showToast('error', errorMessage);
+      } else if (center) {
+        this.showToast('error', errorMessage);
+      } else {
+        console.warn('⚠️ Falha transitória ao atualizar localização:', errorMessage);
       }
+      console.error('❌ Erro geolocalização:', error);
+      return false;
     }
   }
 
@@ -290,35 +355,46 @@ export default class BusTracker {
     }
   }
 
+  // Busca as posições de todas as linhas monitoradas em UMA única chamada
+  // ao proxy (que por sua vez faz no máximo 1 chamada upstream /Posicao por
+  // janela de cache). Retorna um mapa { lineCode: [buses] }.
+  async fetchAllPositions() {
+    const response = await fetch(`${this.apiConfig.baseUrl}/positions`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+
+    const byLine = {};
+    for (const line of data.lines || []) {
+      const code = (line.c || '').split('-')[0];
+      if (!code) continue;
+      if (!byLine[code]) byLine[code] = [];
+      for (const v of line.vs || []) {
+        byLine[code].push({ ...v, sl: line.sl, lineId: line.cl });
+      }
+    }
+    return { hr: data.hr, byLine };
+  }
+
   async preloadBusPositions() {
   console.log('🔄 Pré-carregando posições dos ônibus...');
-  const preloadPromises = this.busLines.map(async (line) => {
-    try {
-      const response = await fetch(`${this.apiConfig.baseUrl}/lines/${line.code}/positions`);
-      if (!response.ok) return;
-      
-      const data = await response.json();
-      let buses = [];
-      if (Array.isArray(data.buses)) buses = data.buses;
-      else if (Array.isArray(data.vs)) buses = data.vs;
+  try {
+    const { byLine } = await this.fetchAllPositions();
 
-      // Armazena as posições sem criar markers
+    // Armazena as posições sem criar markers
+    for (const [lineCode, buses] of Object.entries(byLine)) {
       buses.forEach(bus => {
-        const busId = `${line.code}-${bus.p}`;
+        const busId = `${lineCode}-${bus.p}`;
         this.busPositions.set(busId, {
           lat: bus.py,
           lng: bus.px,
           timestamp: Date.now()
         });
       });
-      
-      console.log(`✅ Posições pré-carregadas para linha ${line.code}: ${buses.length} ônibus`);
-    } catch (error) {
-      console.log(`⚠️ Falha ao pré-carregar linha ${line.code}:`, error.message);
+      console.log(`✅ Posições pré-carregadas para linha ${lineCode}: ${buses.length} ônibus`);
     }
-  });
-
-  await Promise.allSettled(preloadPromises);
+  } catch (error) {
+    console.log('⚠️ Falha ao pré-carregar posições:', error.message);
+  }
   console.log('🎯 Pré-carregamento concluído');
   }
 
@@ -351,27 +427,46 @@ export default class BusTracker {
   }
 
   updateBusMarkers(lineCode, buses) {
-  this.mapManager.removeMarkersByPrefix(`${lineCode}-bus-`);
-
   const lineConfig = this.busLines.find(line => line.code === lineCode);
   if (!lineConfig) return;
 
+  const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
+  const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
+  const prefix = `${lineCode}-bus-`;
+  const seen = new Set();
+
   buses.forEach(bus => {
     const busId = `${lineCode}-${bus.p}`;
-    const markerId = `${lineCode}-bus-${bus.p}`;
-    const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
-    const compensateFilter = isDark ? 'filter: hue-rotate(180deg);' : '';
+    const markerId = `${prefix}${bus.p}`;
+    seen.add(markerId);
 
     const direction = calculateBusDirection(this.busPositions, busId, bus.py, bus.px);
-    
     const sentidoInfo = bus.sl ? ` (Sentido ${bus.sl})` : '';
+    const iconHtml = `<div class="bus-marker">${markerIconHtml(lineConfig, lineCode, compensateFilter, direction)}</div>`;
 
-    this.mapManager.addMarker(markerId, bus.py, bus.px, {
-      iconHtml: `<div class="bus-marker">${markerIconHtml(lineConfig, lineCode, compensateFilter, direction)}</div>`,
-      iconSize: [24, 24],
-      popupHtml: busPopupHtml(lineConfig, lineCode, bus, compensateFilter, sentidoInfo)
-    });
+    const existing = this.mapManager.markers.get(markerId);
+    if (existing) {
+      // Atualiza o marker existente (evita flicker e mantém popup aberto)
+      existing.setLatLng([bus.py, bus.px]);
+      existing.setIcon(this.mapManager.createDivIcon({ html: iconHtml, iconSize: [24, 24] }));
+      if (existing.getPopup()) {
+        existing.setPopupContent(busPopupHtml(lineConfig, lineCode, bus, compensateFilter, sentidoInfo));
+      }
+    } else {
+      this.mapManager.addMarker(markerId, bus.py, bus.px, {
+        iconHtml,
+        iconSize: [24, 24],
+        popupHtml: busPopupHtml(lineConfig, lineCode, bus, compensateFilter, sentidoInfo)
+      });
+    }
   });
+
+  // Remove markers de ônibus que não aparecem mais na resposta
+  for (const key of Array.from(this.mapManager.markers.keys())) {
+    if (key.startsWith(prefix) && !seen.has(key)) {
+      this.mapManager.removeMarker(key);
+    }
+  }
 
   const totalBuses = document.getElementById('total-buses');
   if (totalBuses) {
@@ -442,16 +537,28 @@ export default class BusTracker {
     this.updateStats();
   }
 
+  // Atualiza os markers de todas as linhas ativas com uma única chamada
+  // ao endpoint agregado do proxy.
+  async refreshActiveLines() {
+    try {
+      const { byLine } = await this.fetchAllPositions();
+      for (const lineCode of this.activeBusLines) {
+        this.updateBusMarkers(lineCode, byLine[lineCode] || []);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao atualizar posições:', error);
+      this.showToast('error', 'Erro ao atualizar posições');
+    }
+  }
+
   async refreshBusData() {
     if (this.activeBusLines.size === 0) {
       this.showToast('error', 'Selecione pelo menos uma linha para atualizar');
       return;
     }
 
-    for (const lineCode of this.activeBusLines) {
-      await this.fetchBusPositions(lineCode);
-    }
-  
+    await this.refreshActiveLines();
+
     this.updateStats();
 
     this.showToast('success', 'Dados atualizados! <i class="ri-refresh-line"></i>');
@@ -512,12 +619,71 @@ export default class BusTracker {
   }
 
   startAutoUpdate() {
-    setInterval(() => {
+    const tick = async () => {
       this.checkStatus();
       if (this.authenticated && this.activeBusLines.size > 0) {
-        for (const lc of this.activeBusLines) this.fetchBusPositions(lc);
+        await this.refreshActiveLines();
       }
+    };
+
+    const scheduleNext = () => {
+      this._nextUpdateAt = Date.now() + this.apiConfig.updateInterval;
+    };
+
+    scheduleNext();
+    this._updateTimer = setInterval(() => {
+      tick();
+      scheduleNext();
     }, this.apiConfig.updateInterval);
+
+    this.startRefreshProgress();
+
+    // Pausa as atualizações quando a aba fica em segundo plano e retoma
+    // (com um refresh imediato) quando o usuário volta
+    this._visibilityHandler = () => {
+      if (document.hidden) {
+        clearInterval(this._updateTimer);
+        this._updateTimer = null;
+        this._nextUpdateAt = null;
+        if (this._locationTimer) {
+          clearInterval(this._locationTimer);
+          this._locationTimer = null;
+        }
+      } else if (!this._updateTimer) {
+        tick();
+        scheduleNext();
+        this._updateTimer = setInterval(() => {
+          tick();
+          scheduleNext();
+        }, this.apiConfig.updateInterval);
+        // Retoma o rastreamento de localização, se estiver ativo
+        if (this.locationTracking) {
+          this.updateUserLocation({ center: false });
+          this.startLocationTimer();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', this._visibilityHandler);
+  }
+
+  // Barra de progresso do tempo restante até o próximo refresh dos ônibus
+  startRefreshProgress() {
+    const bar = document.getElementById('refresh-progress-bar');
+    const container = document.getElementById('refresh-progress');
+    if (!bar) return;
+
+    if (this._progressTimer) clearInterval(this._progressTimer);
+    this._progressTimer = setInterval(() => {
+      if (!this._nextUpdateAt) {
+        bar.style.width = '0%';
+        if (container) container.title = 'Atualização pausada (aba em segundo plano)';
+        return;
+      }
+      const remaining = Math.max(0, this._nextUpdateAt - Date.now());
+      const pct = Math.min(100, (remaining / this.apiConfig.updateInterval) * 100);
+      bar.style.width = pct.toFixed(1) + '%';
+      if (container) container.title = `Próxima atualização em ${Math.ceil(remaining / 1000)}s`;
+    }, 100);
   }
 
   // shapes are provided via imported `shapesData` and `routeShapes`

@@ -1,9 +1,7 @@
-// Variáveis de cache com timestamp para evitar conflitos
-const STATIC_CACHE = `static-${new Date().getTime()}`;
-const RUNTIME_CACHE = `runtime-${new Date().getTime()}`;
-const API_CACHE = `api-cache-${new Date().getTime()}`;
+// Versão do cache: incrementar manualmente a cada release para invalidar
+// os caches antigos dos clientes.
+const CACHE_NAME = 'cade-o-circular-v3';
 
-const CACHE_NAME = `cade-o-circular-${new Date().getTime()}`;
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -30,7 +28,6 @@ console.log(`Service Worker instalado: ${CACHE_NAME}`);
 console.log(`Recursos em cache: ${PRECACHE_URLS.length}`);
 
 // Instalação e cache inicial
-
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
@@ -54,6 +51,21 @@ self.addEventListener('fetch', (event) => {
   const reqUrl = new URL(event.request.url);
   if (reqUrl.origin !== location.origin) return;
 
+  // Chamadas de API: sempre rede, sem cache e sem fallback em HTML.
+  // Offline, responde um JSON de erro que o frontend consegue tratar.
+  if (reqUrl.pathname.startsWith('/api/')) {
+    event.respondWith(
+      fetch(event.request).catch(() =>
+        new Response(JSON.stringify({ error: 'Sem conexão com o servidor' }), {
+          status: 503,
+          statusText: 'Offline',
+          headers: { 'Content-Type': 'application/json' }
+        })
+      )
+    );
+    return;
+  }
+
   event.respondWith((async () => {
     const cached = await caches.match(event.request);
     if (cached) return cached;
@@ -61,7 +73,7 @@ self.addEventListener('fetch', (event) => {
     try {
       const response = await fetch(event.request);
       const dest = event.request.destination;
-      if (['image', 'script', 'style', 'document'].includes(dest)) {
+      if (['image', 'script', 'style', 'document'].includes(dest) && response.ok) {
         // attempt to cache in background, but guard clone errors
         try {
           const cache = await caches.open(CACHE_NAME);
@@ -73,14 +85,34 @@ self.addEventListener('fetch', (event) => {
       }
       return response;
     } catch (err) {
-      // network failed — try fallback
-      const fallback = await caches.match('/index.html');
-      return fallback || new Response('Offline', { status: 503, statusText: 'Offline' });
+      // network failed — fallback apenas para navegação/documentos
+      if (event.request.destination === 'document') {
+        const fallback = await caches.match('/index.html');
+        if (fallback) return fallback;
+      }
+      return new Response('Offline', { status: 503, statusText: 'Offline' });
     }
   })());
 });
 
 self.addEventListener('message', (event) => {
   if (!event.data) return;
-  if (event.data.type === 'SKIP_WAITING') self.skipWaiting();
+
+  if (event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+
+  // Limpeza de emergência: apaga todos os caches e refaz o precache
+  if (event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil((async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => caches.delete(key)));
+      const cache = await caches.open(CACHE_NAME);
+      await cache.addAll(PRECACHE_URLS);
+      if (event.ports && event.ports[0]) {
+        event.ports[0].postMessage({ cleared: true });
+      }
+    })());
+  }
 });
