@@ -77,6 +77,88 @@ export function getThemeAwareColor(hex) {
   return isDark ? vibrantColor(hex) : hex;
 }
 
+// --- Alinhamento de direção com os shapes das rotas ---
+
+const EARTH_M_PER_DEG_LAT = 110540;
+const EARTH_M_PER_DEG_LNG = 111320;
+
+// Bearing (0–360, 0 = Norte) entre dois pontos, com correção de longitude
+// pela latitude (aproximação equiretangular, suficiente para curtas distâncias).
+export function bearingDegrees(lat1, lng1, lat2, lng2) {
+  const dx = (lng2 - lng1) * Math.cos((lat1 * Math.PI) / 180);
+  const dy = lat2 - lat1;
+  return (Math.atan2(dx, dy) * (180 / Math.PI) + 360) % 360;
+}
+
+// Menor diferença angular entre dois bearings (0–180).
+function angularDiff(a, b) {
+  return Math.abs(((a - b + 540) % 360) - 180);
+}
+
+// Pré-computa os segmentos de uma lista de shapes (arrays [lat, lng]) com
+// seus bearings, para consultas rápidas de "segmento mais próximo".
+export function buildShapeSegments(shapesLatLngs) {
+  const segments = [];
+  for (const pts of shapesLatLngs) {
+    if (!Array.isArray(pts)) continue;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [lat1, lng1] = pts[i];
+      const [lat2, lng2] = pts[i + 1];
+      if (lat1 === lat2 && lng1 === lng2) continue;
+      segments.push({ lat1, lng1, lat2, lng2, bearing: bearingDegrees(lat1, lng1, lat2, lng2) });
+    }
+  }
+  return segments;
+}
+
+// Retorna o bearing do segmento mais próximo do ponto (lat, lng), orientado
+// no sentido mais compatível com `referenceBearing` (bearing do movimento ou
+// a última direção exibida — evita giros de 180° quando o ônibus está parado).
+// Retorna null quando o ponto está a mais de `maxDistanceMeters` de qualquer
+// segmento (ex.: ônibus na garagem ou em desvio) — nesse caso o caller usa
+// o fallback baseado no movimento.
+export function directionFromShapeSegments(segments, lat, lng, referenceBearing = 0, maxDistanceMeters = 80) {
+  if (!segments || segments.length === 0) return null;
+
+  const cosLat = Math.cos((lat * Math.PI) / 180);
+  const px = lng * EARTH_M_PER_DEG_LNG * cosLat;
+  const py = lat * EARTH_M_PER_DEG_LAT;
+
+  let best = null;
+  let bestDist = Infinity;
+
+  for (const s of segments) {
+    const ax = s.lng1 * EARTH_M_PER_DEG_LNG * cosLat;
+    const ay = s.lat1 * EARTH_M_PER_DEG_LAT;
+    const bx = s.lng2 * EARTH_M_PER_DEG_LNG * cosLat;
+    const by = s.lat2 * EARTH_M_PER_DEG_LAT;
+
+    // Projeção do ponto no segmento (com clamp), em coordenadas planas
+    const abx = bx - ax;
+    const aby = by - ay;
+    const len2 = abx * abx + aby * aby;
+    let t = len2 === 0 ? 0 : ((px - ax) * abx + (py - ay) * aby) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const cx = ax + t * abx;
+    const cy = ay + t * aby;
+
+    const dist = Math.hypot(px - cx, py - cy);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = s;
+    }
+  }
+
+  if (!best || bestDist > maxDistanceMeters) return null;
+
+  // O segmento não tem sentido: escolhe entre o bearing e o seu oposto
+  // aquele mais próximo da referência (movimento recente/última direção)
+  const flipped = (best.bearing + 180) % 360;
+  return angularDiff(referenceBearing, flipped) < angularDiff(referenceBearing, best.bearing)
+    ? flipped
+    : best.bearing;
+}
+
 export function calculateBusDirection(busPositions, busId, currentLat, currentLng) {
   const previousPos = busPositions.get(busId);
   

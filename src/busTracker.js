@@ -1,4 +1,4 @@
-import { isValidCoordinate, calculateOptimalZoom, formatTimeLocale, calculateBusDirection, getThemeAwareColor } from './utils.js';
+import { isValidCoordinate, calculateOptimalZoom, formatTimeLocale, calculateBusDirection, getThemeAwareColor, buildShapeSegments, directionFromShapeSegments } from './utils.js';
 import { markerIconHtml, busPopupHtml, renderBusLineItemHtml, userLocationMarkerHtml, userLocationPopupHtml, stopMarkerHtml } from './uiHelpers.js';
 import MapManager from './mapManager.js';
 import { stopCoords, lineStops } from './stopsData.js';
@@ -19,6 +19,7 @@ export default class BusTracker {
     this.mapManager = new MapManager();
     this.activeBusLines = new Set();
     this.shapeCache = new Map(); 
+    this._shapeSegments = new Map(); // segmentos pré-computados por linha (alinhamento do marcador)
     this.busPositions = new Map();
     Object.keys(shapesData || {}).forEach(k => this.shapeCache.set(k, shapesData[k]));
     this.authenticated = false;
@@ -425,6 +426,23 @@ export default class BusTracker {
     }
   }
 
+  // Segmentos (com bearings pré-computados) de todos os shapes da linha,
+  // usados para alinhar a rotação do marcador à via. Construído uma vez por linha.
+  getShapeSegments(lineCode) {
+    if (!this._shapeSegments.has(lineCode)) {
+      const matchingIds = routeShapes[lineCode] || [];
+      // Mesma lógica de segurança do toggleBusLine: inclui ids que contenham o código
+      for (const sid of this.shapeCache.keys()) {
+        if (!matchingIds.includes(sid) && (sid.startsWith(lineCode) || sid.includes(lineCode))) {
+          matchingIds.push(sid);
+        }
+      }
+      const latlngs = matchingIds.map(sid => this.shapeCache.get(sid)).filter(Boolean);
+      this._shapeSegments.set(lineCode, buildShapeSegments(latlngs));
+    }
+    return this._shapeSegments.get(lineCode);
+  }
+
   updateBusMarkers(lineCode, buses) {
   const lineConfig = this.busLines.find(line => line.code === lineCode);
   if (!lineConfig) return;
@@ -437,7 +455,22 @@ export default class BusTracker {
     const markerId = `${prefix}${bus.p}`;
     seen.add(markerId);
 
-    const direction = calculateBusDirection(this.busPositions, busId, bus.py, bus.px);
+    // 1) Bearing pelo movimento (também atualiza o histórico de posições)
+    const movementBearing = calculateBusDirection(this.busPositions, busId, bus.py, bus.px);
+
+    // 2) Tenta alinhar ao shape: usa a tangente do segmento mais próximo,
+    //    desambiguando o sentido pelo bearing do movimento. Se o ônibus
+    //    estiver longe de qualquer shape (garagem/desvio), usa o movimento.
+    const shapeBearing = directionFromShapeSegments(
+      this.getShapeSegments(lineCode), bus.py, bus.px, movementBearing
+    );
+    const direction = shapeBearing !== null ? shapeBearing : movementBearing;
+
+    // Guarda a direção final exibida: com o ônibus parado, ela vira a
+    // referência da próxima atualização (evita giros espúrios de 180°)
+    const stored = this.busPositions.get(busId);
+    if (stored) stored.direction = direction;
+
     const sentidoInfo = bus.sl ? ` (Sentido ${bus.sl})` : '';
     const iconHtml = `<div class="bus-marker">${markerIconHtml(lineConfig, lineCode, direction)}</div>`;
     const popupHtml = busPopupHtml(lineConfig, lineCode, bus, sentidoInfo);
