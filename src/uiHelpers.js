@@ -1,5 +1,5 @@
 // UI helper functions for rendering HTML snippets used by BusTracker
-import { getThemeAwareColor } from './utils.js';
+import { getThemeAwareColor, minutesBetweenTimes } from './utils.js';
 
 export function markerIconHtml(lineConfig, lineCode, direction = 0) {
   const shortCode = lineCode.split('-')[0].slice(-2);
@@ -106,15 +106,73 @@ export function userLocationPopupHtml(lat, lng, accuracy) {
   return `<div class="user-location-popup"><strong><i class="ri-map-pin-fill"></i> Você está aqui!</strong><br><small>Precisão: ≈${Math.round(accuracy)}m</small><br><small>Latitude: ${lat.toFixed(2)}</small><br><small>Longitude: ${lng.toFixed(2)}</small></div>`;
 }
 
-export function stopPopupHtml(stop, stopId, pinned = false, lineCode = '') {
+export function stopPopupHtml(stop, stopId, pinned = false, lineCode = '', arrivalsHtml = 'Carregando previsões…') {
   const name = (stop && stop.name) ? stop.name : '';
+  // O conteúdo de .stop-arrivals é injetado pelo BusTracker (previsão de chegada
+  // das linhas selecionadas que atendem esta parada). Ele faz parte da string de
+  // conteúdo do popup — e não de um innerHTML avulso — porque o popup.update() do
+  // Leaflet re-renderiza a partir dessa string; escrever direto no DOM seria
+  // sobrescrito na próxima atualização.
   return `<div class="stop-popup">
     <strong>${name}</strong><br>
-    <small>ID: ${stopId}</small><br>
+    <small>ID: ${stopId}</small>
+    <div class="stop-arrivals" data-stop-id="${stopId}">${arrivalsHtml}</div>
     <button class="stop-pin-btn" data-stop-id="${stopId}" data-line-code="${lineCode}">
       <i class="${pinned ? 'ri-pushpin-fill' : 'ri-pushpin-line'}"></i> ${pinned ? 'Desafixar parada' : 'Fixar parada'}
     </button>
   </div>`;
+}
+
+// Renderiza a previsão de chegada, uma linha por bloco, para as linhas
+// selecionadas que atendem a parada. `payload` é a resposta de
+// /api/stops/:id/arrivals; `servingCodes` são os códigos das linhas ativas que
+// atendem a parada; `busLines` traz a configuração (para o nome no title).
+// Mostra as próximas ~3 chegadas de cada linha.
+export function stopArrivalsHtml(payload, servingCodes, busLines = []) {
+  if (!servingCodes || servingCodes.length === 0) {
+    return `<div class="stop-arrivals-empty">Nenhuma linha selecionada atende esta parada</div>`;
+  }
+  if (!payload || payload.success === false) {
+    return `<div class="stop-arrivals-empty">Previsão indisponível</div>`;
+  }
+
+  const hr = payload.hr;
+  const respLines = Array.isArray(payload.lines) ? payload.lines : [];
+
+  const blocks = servingCodes.map((code) => {
+    const cfg = busLines.find((l) => l.code === code);
+    // Todas as entradas da resposta desta linha (o letreiro c vem como "8012-10")
+    const entries = respLines.filter((l) => (l.c || '').split('-')[0] === code);
+
+    const mins = [];
+    let destino = '';
+    for (const e of entries) {
+      if (!destino && e.destino) destino = e.destino;
+      for (const v of (e.veiculos || [])) {
+        const m = minutesBetweenTimes(hr, v.t);
+        if (m === null) continue;
+        mins.push(m);
+      }
+    }
+    mins.sort((a, b) => a - b);
+    const next = mins.slice(0, 3);
+
+    const timesText = next.length === 0
+      ? '<span class="stop-arrival-none">sem previsão</span>'
+      : next.map((m) => (m <= 0 ? 'chegando' : `${m} min`)).join(' · ');
+
+    const destHtml = destino ? `<span class="stop-arrival-dest">→ ${destino}</span>` : '';
+    const titleAttr = cfg && cfg.name ? ` title="${cfg.name}"` : '';
+
+    return `<div class="stop-arrival-line">
+      <div class="stop-arrival-head"${titleAttr}>
+        <span class="stop-arrival-code">${code}</span>${destHtml}
+      </div>
+      <div class="stop-arrival-times">${timesText}</div>
+    </div>`;
+  });
+
+  return `<div class="stop-arrivals-list">${blocks.join('')}</div>`;
 }
 
 export function stopMarkerHtml(stop, lineColor) {

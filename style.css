@@ -1688,6 +1688,59 @@ button:focus-visible {
   background: var(--color-primary-active);
 }
 
+/* Previsão de chegada dentro do popup da parada */
+.stop-arrivals {
+  margin: 8px 0;
+  font-size: 12px;
+  text-align: left;
+}
+
+.stop-arrivals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stop-arrival-line {
+  border-top: 1px solid var(--color-border);
+  padding-top: 4px;
+}
+
+.stop-arrival-line:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.stop-arrival-head {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.stop-arrival-code {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.stop-arrival-dest {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stop-arrival-times {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.stop-arrival-none,
+.stop-arrivals-empty {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
 /* --- Caminho de baixo custo para overlays sobre o mapa ---
    backdrop-filter: blur() força reborrar os pixels do mapa em movimento a cada
    frame de pan/zoom — barato no WebKit/iOS, caro em GPUs Android intermediárias.
