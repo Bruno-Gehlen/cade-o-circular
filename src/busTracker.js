@@ -1,5 +1,5 @@
 import { isValidCoordinate, calculateOptimalZoom, formatTimeLocale, calculateBusDirection, getThemeAwareColor, buildShapeSegments, directionFromShapeSegments, distanceMeters, minutesBetweenTimes } from './utils.js';
-import { markerIconHtml, busPopupHtml, renderBusLineItemHtml, userLocationMarkerHtml, userLocationPopupHtml, stopMarkerHtml, stopPopupHtml } from './uiHelpers.js';
+import { markerIconHtml, busPopupHtml, renderBusLineItemHtml, userLocationMarkerHtml, userLocationPopupHtml, stopMarkerHtml, stopPopupHtml, stopArrivalsHtml } from './uiHelpers.js';
 import MapManager from './mapManager.js';
 import { stopCoords, lineStops } from './stopsData.js';
 import shapesData from './shapesData.js';
@@ -35,6 +35,11 @@ export default class BusTracker {
     this._nextUpdateAt = null;
     this._progressTimer = null;
     this._savedUIState = null;
+    // Popup de parada aberto e o timer que atualiza sua previsão de chegada
+    this._openStopPopup = null;
+    this._openStopId = null;
+    this._openStopLineCode = '';
+    this._stopArrivalsTimer = null;
     this.init();
   }
 
@@ -95,6 +100,37 @@ export default class BusTracker {
         if (this._savedUIState.panelCollapsed) panelEl?.classList.add('abaixado'); else panelEl?.classList.remove('abaixado');
         this._savedUIState = null;
       }
+    });
+
+    // Previsão de chegada nos popups das paradas: busca ao abrir e reatualiza
+    // no mesmo ciclo (~10s) enquanto o popup estiver aberto; para ao fechar.
+    this.mapManager.on('popupopen', (e) => {
+      const el = e.popup?.getElement?.();
+      const container = el ? el.querySelector('.stop-arrivals') : null;
+      if (!container) return; // não é um popup de parada
+      const stopId = container.getAttribute('data-stop-id');
+      const pinBtn = el.querySelector('.stop-pin-btn');
+      this._openStopPopup = e.popup;
+      this._openStopId = stopId;
+      // Preserva a linha do marcador clicado para reconstruir o popup mantendo
+      // o data-line-code correto do botão de fixar.
+      this._openStopLineCode = pinBtn ? (pinBtn.getAttribute('data-line-code') || '') : '';
+      this._populateStopArrivals(stopId);
+      if (this._stopArrivalsTimer) clearInterval(this._stopArrivalsTimer);
+      this._stopArrivalsTimer = setInterval(() => {
+        if (!document.hidden) this._populateStopArrivals(stopId);
+      }, this.apiConfig.updateInterval);
+    });
+
+    this.mapManager.on('popupclose', (e) => {
+      if (e.popup !== this._openStopPopup) return;
+      if (this._stopArrivalsTimer) {
+        clearInterval(this._stopArrivalsTimer);
+        this._stopArrivalsTimer = null;
+      }
+      this._openStopPopup = null;
+      this._openStopId = null;
+      this._openStopLineCode = '';
     });
 
     // Sidebar drag handle
@@ -486,6 +522,47 @@ export default class BusTracker {
       const stop = stopCoords[stopId];
       if (!stop) continue;
       marker.setPopupContent(stopPopupHtml(stop, stopId, this.pinnedStop?.id === stopId, lineCode));
+    }
+    // setPopupContent acima repõe o placeholder "Carregando" no popup aberto;
+    // recarrega a previsão para não deixá-lo preso em estado de carregamento.
+    if (this._openStopId) this._populateStopArrivals(this._openStopId);
+  }
+
+  // Busca e injeta a previsão de chegada no popup de parada aberto, apenas para
+  // as linhas ativas que atendem esta parada (a união das linhas selecionadas —
+  // independente de qual marcador sobreposto foi clicado). Chamado ao abrir o
+  // popup e a cada ciclo enquanto ele permanecer aberto.
+  async _populateStopArrivals(stopId) {
+    const popup = this._openStopPopup;
+    if (!popup || this._openStopId !== stopId) return;
+
+    // Reconstrói o conteúdo do popup com a previsão embutida e usa setContent:
+    // é a string de conteúdo do popup que o Leaflet re-renderiza em cada
+    // update(); escrever direto no .stop-arrivals do DOM seria revertido.
+    const writeArrivals = (arrivalsHtml) => {
+      if (this._openStopPopup !== popup || this._openStopId !== stopId) return;
+      const stop = stopCoords[stopId];
+      if (!stop) return;
+      const pinned = this.pinnedStop?.id === stopId;
+      popup.setContent(stopPopupHtml(stop, stopId, pinned, this._openStopLineCode, arrivalsHtml));
+    };
+
+    const servingCodes = [...this.activeBusLines]
+      .filter((code) => (lineStops[code] || []).includes(stopId));
+
+    if (servingCodes.length === 0) {
+      writeArrivals(stopArrivalsHtml(null, [], this.busLines));
+      return;
+    }
+
+    try {
+      const response = await fetch(`${this.apiConfig.baseUrl}/stops/${stopId}/arrivals?lines=${servingCodes.join(',')}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      writeArrivals(stopArrivalsHtml(payload, servingCodes, this.busLines));
+    } catch (error) {
+      console.warn('⚠️ Falha ao buscar previsão do popup da parada:', error.message);
+      writeArrivals(stopArrivalsHtml({ success: false }, servingCodes, this.busLines));
     }
   }
 
