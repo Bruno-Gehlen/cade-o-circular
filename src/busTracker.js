@@ -258,8 +258,14 @@ export default class BusTracker {
       // this.showToast('success', 'Todas as linhas desmarcadas');
     });
 
-    document.getElementById('refresh-btn')?.addEventListener('click', () => {
-      this.refreshBusData();
+    document.getElementById('select-weekday-btn')?.addEventListener('click', () => {
+      // Dias úteis: linhas de horário fixo (não-24h)
+      this.applyLineGroup(['8082', '8083', '8084', '8085']);
+    });
+
+    document.getElementById('select-weekend-btn')?.addEventListener('click', () => {
+      // Fim de semana: circulares 24 horas
+      this.applyLineGroup(['8012', '8022']);
     });
 
     document.addEventListener('change', (e) => {
@@ -930,17 +936,19 @@ export default class BusTracker {
     }
   }
 
-  async refreshBusData() {
-    if (this.activeBusLines.size === 0) {
-      this.showToast('error', 'Selecione pelo menos uma linha para atualizar');
-      return;
-    }
-
-    await this.refreshActiveLines();
-
-    this.updateStats();
-
-    this.showToast('success', 'Dados atualizados! <i class="ri-refresh-line"></i>');
+  // Ativa exatamente o grupo de linhas informado (presets "Dias úteis" e "Fim
+  // de Semana"): marca as do grupo e desmarca as demais, alternando apenas as
+  // que mudam de estado para não recriar marcadores/rotas desnecessariamente.
+  applyLineGroup(groupCodes) {
+    const group = new Set(groupCodes);
+    document.querySelectorAll('input[data-line]').forEach((checkbox) => {
+      const code = checkbox.dataset.line;
+      const shouldBeActive = group.has(code);
+      checkbox.checked = shouldBeActive;
+      if (shouldBeActive !== this.activeBusLines.has(code)) {
+        this.toggleBusLine(code, shouldBeActive);
+      }
+    });
   }
 
   updateStats() {
