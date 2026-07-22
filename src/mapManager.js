@@ -11,6 +11,15 @@ export default class MapManager {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
     }).addTo(this.map);
+
+    // As paradas ganham um pane próprio ABAIXO do markerPane (z-index 600), onde
+    // ficam os ônibus. Assim os marcadores de ônibus ficam SEMPRE acima das
+    // paradas, independentemente da latitude — que é o critério padrão de
+    // empilhamento do Leaflet e faria uma parada ao sul cobrir um ônibus.
+    // 590 continua acima do overlayPane (400, rotas), então os pontos aparecem.
+    this.map.createPane('stopPane');
+    this.map.getPane('stopPane').style.zIndex = 590;
+
     return this.map;
   }
 
@@ -28,12 +37,14 @@ export default class MapManager {
     return L.divIcon({ html, iconSize, iconAnchor });
   }
 
-  addMarker(id, lat, lng, { iconHtml = '', iconSize = [24,24], iconAnchor = null, popupHtml = '' } = {}) {
+  addMarker(id, lat, lng, { iconHtml = '', iconSize = [24,24], iconAnchor = null, popupHtml = '', pane = null } = {}) {
     if (!this.map) return null;
     // Remove existing marker with same id
     this.removeMarker(id);
     const icon = this.createDivIcon({ html: iconHtml, iconSize, iconAnchor });
-    const marker = L.marker([lat, lng], { icon }).addTo(this.map);
+    const markerOptions = { icon };
+    if (pane) markerOptions.pane = pane;
+    const marker = L.marker([lat, lng], markerOptions).addTo(this.map);
     if (popupHtml) marker.bindPopup(popupHtml);
     this.markers.set(id, marker);
     return marker;

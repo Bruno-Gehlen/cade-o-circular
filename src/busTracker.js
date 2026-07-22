@@ -796,7 +796,8 @@ export default class BusTracker {
         iconHtml: stopMarkerHtml(stop, stopColor),
         iconSize: [14, 14],
         iconAnchor: [7, 7],
-        popupHtml: stopPopupHtml(stop, stopId, this.pinnedStop?.id === stopId, lineCode)
+        popupHtml: stopPopupHtml(stop, stopId, this.pinnedStop?.id === stopId, lineCode),
+        pane: 'stopPane'
       });
     });
   }
