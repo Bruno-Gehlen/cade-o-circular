@@ -39,6 +39,15 @@ export default class BusTracker {
   }
 
   async init() {
+    // Clientes de baixa capacidade (Android/pouca RAM) pagam caro por re-borrar
+    // os pixels do mapa animado sob os overlays. Marca o documento para trocar
+    // backdrop-filter por fundos sólidos (ver .no-blur no style.css). iOS/desktop
+    // mantêm o efeito fosco.
+    const ua = navigator.userAgent || '';
+    const isAndroid = /Android/i.test(ua);
+    const lowMem = (navigator.deviceMemory || 8) <= 4;
+    if (isAndroid || lowMem) document.documentElement.classList.add('no-blur');
+
     this.setupUI();
     this.setupTheme();
     this.renderBusLines();
@@ -120,9 +129,12 @@ export default class BusTracker {
     document.addEventListener('mousemove', onDragMove);
     document.addEventListener('mouseup', onDragEnd);
 
-    dragHandle.addEventListener('touchstart', onDragStart);
-    document.addEventListener('touchmove', onDragMove);
-    document.addEventListener('touchend', onDragEnd);
+    // passive: os handlers só leem coordenadas (nunca preventDefault), então
+    // marcá-los como passivos deixa o Chrome-Android iniciar o pan do mapa sem
+    // esperar o JS — remove o input lag no arrasto sobre o mapa.
+    dragHandle.addEventListener('touchstart', onDragStart, { passive: true });
+    document.addEventListener('touchmove', onDragMove, { passive: true });
+    document.addEventListener('touchend', onDragEnd, { passive: true });
 
     const lastUpdate = document.getElementById('last-update');
     if (lastUpdate) lastUpdate.textContent = `Atualizado às ${formatTimeLocale()}`;
@@ -696,23 +708,43 @@ export default class BusTracker {
     if (stored) stored.direction = direction;
 
     const sentidoInfo = bus.sl ? ` (Sentido ${bus.sl})` : '';
-    const iconHtml = `<div class="bus-marker">${markerIconHtml(lineConfig, lineCode, direction)}</div>`;
-    const popupHtml = busPopupHtml(lineConfig, lineCode, bus, sentidoInfo);
+    const isDark = document.body?.getAttribute('data-color-scheme') === 'dark';
+    const roundedDir = Math.round(direction);
 
     const existing = this.mapManager.markers.get(markerId);
     if (existing) {
-      // Atualiza o marker existente (evita flicker e mantém popup aberto)
+      // A posição é atualizada todo tick, mas o ícone (nó DOM/SVG) só é
+      // reconstruído quando o tema muda (recolore). Uma mudança de direção
+      // apenas gira o nó existente via a variável CSS --rotation, sem recriar
+      // o DOM — evita flicker, mantém o popup aberto e corta o custo por tick.
       existing.setLatLng([bus.py, bus.px]);
-      existing.setIcon(this.mapManager.createDivIcon({ html: iconHtml, iconSize: [24, 24] }));
+      const themeChanged = existing._busRenderedDark !== isDark;
+      const dirChanged = existing._busRenderedDir !== roundedDir;
+      if (themeChanged) {
+        const iconHtml = `<div class="bus-marker">${markerIconHtml(lineConfig, lineCode, direction)}</div>`;
+        existing.setIcon(this.mapManager.createDivIcon({ html: iconHtml, iconSize: [24, 24] }));
+        this._applyMarkerRotation(existing, direction);
+      } else if (dirChanged) {
+        this._applyMarkerRotation(existing, direction);
+      }
+      existing._busRenderedDir = roundedDir;
+      existing._busRenderedDark = isDark;
       if (existing.getPopup()) {
-        existing.setPopupContent(popupHtml);
+        existing.setPopupContent(busPopupHtml(lineConfig, lineCode, bus, sentidoInfo));
       }
     } else {
-      this.mapManager.addMarker(markerId, bus.py, bus.px, {
+      const iconHtml = `<div class="bus-marker">${markerIconHtml(lineConfig, lineCode, direction)}</div>`;
+      const popupHtml = busPopupHtml(lineConfig, lineCode, bus, sentidoInfo);
+      const marker = this.mapManager.addMarker(markerId, bus.py, bus.px, {
         iconHtml,
         iconSize: [24, 24],
         popupHtml
       });
+      this._applyMarkerRotation(marker, direction);
+      if (marker) {
+        marker._busRenderedDir = roundedDir;
+        marker._busRenderedDark = isDark;
+      }
     }
   });
 
@@ -735,6 +767,18 @@ export default class BusTracker {
     }
     totalBuses.textContent = busCount;
   }
+  }
+
+  // Gira o marcador de ônibus escrevendo a variável CSS --rotation no nó já
+  // existente, sem reconstruir o ícone. A gota (.bus-rotator) e o texto
+  // (.bus-label) leem essa variável — o texto com o giro contrário para ficar
+  // sempre na horizontal.
+  _applyMarkerRotation(marker, direction) {
+    if (!marker || typeof marker.getElement !== 'function') return;
+    const el = marker.getElement();
+    if (!el) return;
+    const svg = el.querySelector('.bus-marker-svg');
+    if (svg) svg.style.setProperty('--rotation', `${direction}deg`);
   }
 
   addStopMarkers(lineCode) {
@@ -965,15 +1009,17 @@ export default class BusTracker {
     if (this._progressTimer) clearInterval(this._progressTimer);
     this._progressTimer = setInterval(() => {
       if (!this._nextUpdateAt) {
-        bar.style.width = '0%';
+        bar.style.transform = 'scaleX(0)';
         if (container) container.title = 'Atualização pausada (aba em segundo plano)';
         return;
       }
       const remaining = Math.max(0, this._nextUpdateAt - Date.now());
       const pct = Math.min(100, (remaining / this.apiConfig.updateInterval) * 100);
-      bar.style.width = pct.toFixed(1) + '%';
+      // scaleX é composto pela GPU; width forçaria layout+paint a cada tick,
+      // mesmo com o mapa parado. Intervalo de 250ms (visualmente idêntico p/ 10s).
+      bar.style.transform = `scaleX(${(pct / 100).toFixed(3)})`;
       if (container) container.title = `Próxima atualização em ${Math.ceil(remaining / 1000)}s`;
-    }, 100);
+    }, 250);
   }
 
   // shapes are provided via imported `shapesData` and `routeShapes`
