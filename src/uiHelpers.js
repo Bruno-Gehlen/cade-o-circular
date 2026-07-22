@@ -3,50 +3,33 @@ import { getThemeAwareColor } from './utils.js';
 
 export function markerIconHtml(lineConfig, lineCode, direction = 0) {
   const shortCode = lineCode.split('-')[0].slice(-2);
-  const rotationStyle = `transform: rotate(${direction}deg);`;
   // No tema escuro usa a versão vibrante da cor da linha
   const lineColor = getThemeAwareColor(lineConfig.color);
-  
+
   // Texto preto no tema escuro (sobre a cor vibrante clara do marcador).
   // A borda é sempre branca: no mapa escuro ela destaca o marcador e no
   // claro mantém a aparência original.
   const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-color-scheme') === 'dark';
   const textColor = isDark ? '#000' : '#fff';
   const strokeColor = '#fff';
-  const shadowOpacity = isDark ? '0.6' : '0.3';
-  
+
+  // A rotação é aplicada pela variável CSS --rotation (lida por .bus-rotator e,
+  // com o sinal invertido, por .bus-label). O valor inicial vai embutido aqui
+  // para o primeiro paint sair correto; depois o BusTracker atualiza só essa
+  // variável no nó existente, sem regenerar o SVG. A sombra passou a ser um
+  // filtro CSS estático em .bus-marker-svg (ver style.css).
   return `
-    <div class="bus-marker-svg" style="position: relative;">
-      <div style="${rotationStyle}">
+    <div class="bus-marker-svg" style="position: relative; --rotation: ${direction}deg;">
+      <div class="bus-rotator">
         <svg width="27" height="32" viewBox="0 0 65 65" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <filter id="shadow-${shortCode}">
-              <feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-opacity="${shadowOpacity}"/>
-            </filter>
-          </defs>
-
-          <!-- Corpo da gota -->
           <path d="M31.993 2C20.563 17.624 14 32.007 14 43.827C14 53.859 22.064 62 32.001 62C41.946 62 50 53.859 50 43.827C50 32.007 43.245 17.383 31.993 2z"
-                fill="${lineColor}" 
-                stroke="${strokeColor}" 
-                stroke-width="2" 
-                filter="url(#shadow-${shortCode})"/>
-
+                fill="${lineColor}"
+                stroke="${strokeColor}"
+                stroke-width="2"/>
         </svg>
-        <p style="
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -40%) rotate(-${direction}deg);
-          text-align: center;
-          font-family: Inter, -apple-system, sans-serif;
-          font-size: 10px;
-          font-weight: 600;
-          color: ${textColor};
-          margin: 0;
-          line-height: 1;">
-          ${shortCode}
-        </p>
+        <p class="bus-label" style="color: ${textColor};">${shortCode}</p>
+      </div>
+    </div>
   `;
 }
 

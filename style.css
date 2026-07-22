@@ -1098,13 +1098,26 @@ body {
 }
 
 .user-location-inner {
+  position: relative;
   width: 20px;
   height: 20px;
   border-radius: 50%;
   border: 3px solid #fff;
   box-shadow: 0 0 0 3px rgba(0,123,255,0.3);
   background: #3fba99ff;
-  animation: pulse 2s infinite;
+}
+
+/* Anel pulsante via transform+opacity (composto pela GPU) em vez do box-shadow
+   expansivo do @keyframes pulse, que repintava a cada frame. Só anima enquanto
+   o marcador de localização existe (rastreamento ativo). */
+.user-location-inner::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 3px solid rgba(0, 123, 255, 0.7);
+  animation: pulse-ring 2s infinite;
+  pointer-events: none;
 }
 
 /* Bottom Panel */
@@ -1297,16 +1310,19 @@ body {
 
 
 
-/* ✅ CSS para animação do marcador de usuário */
-@keyframes pulse {
+/* ✅ Anel pulsante do marcador de usuário (transform+opacity, sem repaint) */
+@keyframes pulse-ring {
     0% {
-        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
+        transform: scale(1);
+        opacity: 0.7;
     }
     70% {
-        box-shadow: 0 0 0 10px rgba(0, 123, 255, 0);
+        transform: scale(2.4);
+        opacity: 0;
     }
     100% {
-        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+        transform: scale(2.4);
+        opacity: 0;
     }
 }
 #find-location.loading {
@@ -1510,38 +1526,43 @@ button:focus-visible {
   transform-origin: 12px 26px; /* Ponto de rotação na base da gota */
   transition: transform 0.4s var(--ease-standard);
   cursor: pointer;
+  /* Sombra única, rasterizada pelo compositor, no lugar do <feDropShadow> por
+     marcador (que o Android rasteriza devagar a cada ícone reconstruído). */
+  filter: drop-shadow(0 2px 1.5px rgba(0, 0, 0, 0.3));
+}
+
+[data-color-scheme="dark"] .bus-marker-svg {
+  filter: drop-shadow(0 2px 1.5px rgba(0, 0, 0, 0.6));
 }
 
 .bus-marker-svg:hover {
-  transform: scale(1.1) rotate(var(--rotation, 0deg));
+  transform: scale(1.1);
 }
 
 .bus-marker-svg svg {
   overflow: visible; /* Permite que a sombra seja visível */
 }
 
-/* Animação suave na rotação */
-.bus-marker-svg {
-  animation: smooth-rotation 0.2s ease-out;
+/* A gota gira lendo --rotation, escrita pelo JS diretamente no nó já existente
+   (sem recriar o ícone). A transição suaviza as mudanças de direção. */
+.bus-rotator {
+  transform: rotate(var(--rotation, 0deg));
+  transition: transform 0.4s var(--ease-standard);
 }
 
-.bus-marker-svg .text {
-  font-size: 15px;
-  font-weight: bold;
-  fill: white;
-  /* text-shadow: 0 1px 2px rgba(255,255,255,0.7); */
-}
-
-@keyframes smooth-rotation {
-  from {
-    /* transform: rotate(calc(var(--rotation, 0deg) - 45deg)) scale(0.8); */
-    transform: rotate(calc(var(--rotation, 0deg))) scale(0.8);
-    opacity: 0.7;
-  }
-  to {
-    transform: rotate(var(--rotation, 0deg)) scale(1);
-    opacity: 1;
-  }
+/* Código da linha: giro contrário ao da gota para permanecer na horizontal.
+   A cor (preto/branco conforme o tema) vem inline do markerIconHtml. */
+.bus-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -40%) rotate(calc(-1 * var(--rotation, 0deg)));
+  text-align: center;
+  font-family: Inter, -apple-system, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1;
 }
 
 /* Barra de progresso: tempo restante até a próxima atualização dos ônibus.
@@ -1557,9 +1578,12 @@ button:focus-visible {
 
 .refresh-progress-bar {
   height: 100%;
-  width: 0%;
+  width: 100%;
+  transform-origin: left;
+  transform: scaleX(0);
   background: var(--color-primary);
-  transition: width 100ms linear;
+  /* Preenche via scaleX (composto pela GPU) em vez de width (layout+paint) */
+  transition: transform 250ms linear;
 }
 
 /* Botão "Minha Localização" com o rastreamento ativo */
@@ -1662,4 +1686,27 @@ button:focus-visible {
 
 .stop-pin-btn:active {
   background: var(--color-primary-active);
+}
+
+/* --- Caminho de baixo custo para overlays sobre o mapa ---
+   backdrop-filter: blur() força reborrar os pixels do mapa em movimento a cada
+   frame de pan/zoom — barato no WebKit/iOS, caro em GPUs Android intermediárias.
+   Em clientes de baixa capacidade (marcados com .no-blur pelo busTracker) e para
+   quem pede menos transparência, removemos o blur. Os fundos já são quase opacos
+   (0.92–1.0), então seguem legíveis sobre tiles claros e escuros; iOS/desktop
+   mantêm o efeito fosco. Bloco no fim do arquivo para vencer as regras-base. */
+.no-blur .top-controls,
+.no-blur .loading-overlay,
+.no-blur .update-overlay {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .top-controls,
+  .loading-overlay,
+  .update-overlay {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }

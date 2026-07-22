@@ -1,6 +1,6 @@
 {
   "name": "usp-bus-monitor",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Sistema de monitoramento em tempo real dos ônibus da USP Butantã",
   "main": "proxy.js",
   "type": "module",
