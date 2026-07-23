@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3000;
 const SPTRANS_BASE_URL = 'https://api.olhovivo.sptrans.com.br/v2.1';
 
 // Letreiros monitorados (sem o sufixo de tipo, ex.: "8082" de "8082-10")
-const LINE_CODES = ['8012', '8022', '8082', '8083', '8084', '8085'];
+const LINE_CODES = ['8012', '8022', '8082', '8083', '8084', '8085', '8086', '177H', '701U', '702U', '809U', '7181', '7411', '7725'];
 
 // TTL do cache de posições. Alinhado com o intervalo de atualização do
 // frontend (10s): N usuários simultânicos continuam gerando no máximo

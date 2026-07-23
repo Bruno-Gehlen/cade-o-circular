@@ -40,8 +40,16 @@ export function busPopupHtml(lineConfig, lineCode, bus, sentidoInfo = '') {
     '8083': { '1': 'Butantã', '2': 'P3' },
     '8084': { '1': 'Estátua', '2': 'Butantã' },
     '8085': { '1': 'PTrem', '2': 'P3' },
+    '8086': { '1': 'Pinheiros', '2': 'Jaguaré' },
     '8012': { '1': 'Butantã', '2': 'P3' },
-    '8022': { '1': 'Butantã', '2': 'P3' }
+    '8022': { '1': 'Butantã', '2': 'P3' },
+    '177H': { '1': 'P2', '2': 'Metr. Sant.' },
+    '701U': { '1': 'P2', '2': 'Metr. Sant.' },
+    '702U': { '1': 'Parq. DPII', '2': 'P2' },
+    '809U': { '1': 'Barr. Fund.', '2': 'P2' },
+    '7181': { '1': 'Prin. Isb.', '2': 'P2' },
+    '7411': { '1': 'Sé', '2': 'P2' },
+    '7725': { '1': 'Lapa', '2': 'Rio Pequeno' }
   };
 
   const timeHtml = bus.hr ? `

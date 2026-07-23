@@ -263,12 +263,12 @@ export default class BusTracker {
 
     document.getElementById('select-weekday-btn')?.addEventListener('click', () => {
       // Dias úteis: linhas de horário fixo (não-24h)
-      this.applyLineGroup(['8082', '8083', '8084', '8085']);
+      this.applyLineGroup(['8082', '8083', '8084', '8085', '8086', '177H', '701U', '702U', '809U', '7181', '7411', '7725']);
     });
 
     document.getElementById('select-weekend-btn')?.addEventListener('click', () => {
       // Fim de semana: circulares 24 horas
-      this.applyLineGroup(['8012', '8022']);
+      this.applyLineGroup(['8012', '8022', '8086']);
     });
 
     document.addEventListener('change', (e) => {
@@ -1024,7 +1024,7 @@ export default class BusTracker {
       toast.classList.remove('hidden');
       toast.classList.add('visible');
       clearTimeout(toast._hideTimeout);
-      toast._hideTimeout = setTimeout(() => { toast.classList.remove('visible'); toast.classList.add('hidden'); }, 3000);
+      toast._hideTimeout = setTimeout(() => { toast.classList.remove('visible'); toast.classList.add('hidden'); }, 2000);
     }
   }
 
