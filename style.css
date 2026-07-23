@@ -792,7 +792,7 @@ body {
 }
 
 .top-controls.collapsed {
-  transform: translateY(-95%);
+  transform: translateY(-98%);
   opacity: 0.7;
   pointer-events: auto;
   transition: transform 0.7s var(--ease-standard), opacity 0.7s var(--ease-standard);
@@ -860,6 +860,13 @@ body {
 
 .sidebar.collapsed {
     transform: translateX(-280px);
+    /* .sidebar tem position+z-index, então cria um stacking context e "prende"
+       o .sidebar-toggle no nível da própria sidebar — aumentar só o z-index do
+       toggle não o eleva acima do #sidebar-drag-handle (z-index 10001), que é
+       irmão da sidebar. Ao colapsar, elevamos a sidebar acima do drag-handle
+       para a aba do toggle continuar clicável; a faixa do drag-handle à
+       esquerda do toggle segue capturando o arrasto para abrir. */
+    z-index: 10002;
 }
 
 .sidebar-header {
@@ -1165,7 +1172,7 @@ body {
     justify-content: space-between;
     align-items: center;
     background: var(--color-bg-6);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    /* border-radius: var(--radius-lg) var(--radius-lg) 0 0; */
 }
 
 .panel-header h4 {
@@ -1352,7 +1359,7 @@ body {
     }
     
     .sidebar.collapsed {
-        transform: translateX(-90%);
+        transform: translateX(-95%);
     }
 
     .sidebar.abaixada {
@@ -1400,15 +1407,15 @@ body {
 
 @media (max-width: 480px) {
     .top-controls {
-        left: var(--space-8);
-        right: var(--space-8);
-        top: var(--space-8);
+        left: var(--space-4);
+        right: var(--space-4);
+        top: var(--space-4);
         padding: var(--space-8);
     }
     
     .sidebar {
         top: 120px;
-        height: calc(100vh - 180px);
+        height: calc(100vh - 200px);
     }
     
     .stats-grid {

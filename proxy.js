@@ -305,7 +305,7 @@ app.get('/api/stops/:stopId/arrivals', (req, res, next) => {
   const requestedLines = (req.query.lines || '')
     .split(',')
     .map((s) => s.trim())
-    .filter((s) => /^\d{4}$/.test(s));
+    .filter((s) => /^[0-9A-Za-z]{4}$/.test(s));
 
   try {
     const cacheKey = `${stopId}:${requestedLines.slice().sort().join(',')}`;

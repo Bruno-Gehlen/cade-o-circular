@@ -25,7 +25,6 @@ export default class BusTracker {
     this.authenticated = false;
     this.userLocationMarker = null;
     this.locationTracking = false;
-    this._locationTimer = null;
     this.userLocation = null;      // { lat, lng } da última leitura conhecida
     this.pinnedStop = null;        // parada fixada pelo usuário { id, name, lat, lon, lineCode }
     this._nearestStop = null;      // parada de referência atual (fixada ou mais próxima)
@@ -39,7 +38,6 @@ export default class BusTracker {
     this._openStopPopup = null;
     this._openStopId = null;
     this._openStopLineCode = '';
-    this._stopArrivalsTimer = null;
     this.init();
   }
 
@@ -115,19 +113,13 @@ export default class BusTracker {
       // Preserva a linha do marcador clicado para reconstruir o popup mantendo
       // o data-line-code correto do botão de fixar.
       this._openStopLineCode = pinBtn ? (pinBtn.getAttribute('data-line-code') || '') : '';
+      // Busca imediata ao abrir; os refreshes seguintes vêm do tick() global
+      // (startAutoUpdate), mantendo o popup em sincronia com os demais reloads.
       this._populateStopArrivals(stopId);
-      if (this._stopArrivalsTimer) clearInterval(this._stopArrivalsTimer);
-      this._stopArrivalsTimer = setInterval(() => {
-        if (!document.hidden) this._populateStopArrivals(stopId);
-      }, this.apiConfig.updateInterval);
     });
 
     this.mapManager.on('popupclose', (e) => {
       if (e.popup !== this._openStopPopup) return;
-      if (this._stopArrivalsTimer) {
-        clearInterval(this._stopArrivalsTimer);
-        this._stopArrivalsTimer = null;
-      }
       this._openStopPopup = null;
       this._openStopId = null;
       this._openStopLineCode = '';
@@ -147,11 +139,9 @@ export default class BusTracker {
     function onDragMove(e) {
       if (!dragging) return;
       const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+      // Arrastar da borda esquerda para a direita (>40px) abre a sidebar colapsada.
       if ((currentX - dragStartX) > 40) {
-        // Expand sidebar and collapse bottom-panel
-        // self.setSidebarCollapsed(false);
-        const toggleBtn = document.getElementById('sidebar-toggle');
-        if (toggleBtn) toggleBtn.focus();
+        if (sidebar) sidebar.classList.remove('collapsed');
         dragging = false;
       }
     }
@@ -317,24 +307,13 @@ export default class BusTracker {
     this.locationTracking = true;
     this.updateLocationButtonState(true);
     this.showToast('success', 'Rastreamento ativado! <i class="ri-navigation-fill"></i>');
-
-    this.startLocationTimer();
+    // As atualizações periódicas vêm do tick() global (startAutoUpdate),
+    // sincronizadas com os demais reloads a cada 10s.
   }
 
   stopLocationTracking() {
     this.locationTracking = false;
-    if (this._locationTimer) {
-      clearInterval(this._locationTimer);
-      this._locationTimer = null;
-    }
     this.updateLocationButtonState(false);
-  }
-
-  startLocationTimer() {
-    if (this._locationTimer) clearInterval(this._locationTimer);
-    this._locationTimer = setInterval(() => {
-      this.updateUserLocation({ center: false });
-    }, 15000);
   }
 
   updateLocationButtonState(active) {
@@ -1047,6 +1026,11 @@ export default class BusTracker {
         await this.refreshActiveLines();
       }
       this.updateNearestStopInfo();
+      // Previsão do popup de parada aberto e posição do usuário (se o
+      // rastreamento estiver ativo) entram no MESMO ciclo — assim posições,
+      // previsões (barra inferior e popup) e localização recarregam juntas.
+      if (this._openStopId) this._populateStopArrivals(this._openStopId);
+      if (this.locationTracking) this.updateUserLocation({ center: false });
     };
 
     const scheduleNext = () => {
@@ -1068,22 +1052,15 @@ export default class BusTracker {
         clearInterval(this._updateTimer);
         this._updateTimer = null;
         this._nextUpdateAt = null;
-        if (this._locationTimer) {
-          clearInterval(this._locationTimer);
-          this._locationTimer = null;
-        }
       } else if (!this._updateTimer) {
+        // tick() já reatualiza posições, previsões (barra + popup) e localização
+        // no mesmo ciclo — não há timers separados para religar.
         tick();
         scheduleNext();
         this._updateTimer = setInterval(() => {
           tick();
           scheduleNext();
         }, this.apiConfig.updateInterval);
-        // Retoma o rastreamento de localização, se estiver ativo
-        if (this.locationTracking) {
-          this.updateUserLocation({ center: false });
-          this.startLocationTimer();
-        }
       }
     };
     document.addEventListener('visibilitychange', this._visibilityHandler);

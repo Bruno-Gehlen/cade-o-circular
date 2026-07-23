@@ -1,7 +1,7 @@
 # 🚌 Cadê o Circular - Monitor Ônibus USP Butantã
 
 ![USP Bus Monitor](https://img.shields.io/badge/Status-Ativo-success?style=flat)
-![Version](https://img.shields.io/badge/Version-0.2.3-blue?style=flat)
+![Version](https://img.shields.io/badge/Version-0.2.7-blue?style=flat)
 ![API](https://img.shields.io/badge/API-SPTrans-orange?style=flat)
 
 ## 🎯 Sobre o Projeto

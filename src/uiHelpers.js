@@ -167,7 +167,7 @@ export function stopArrivalsHtml(payload, servingCodes, busLines = []) {
       ? '<span class="stop-arrival-none">sem previsão</span>'
       : next.map((m) => (m <= 0 ? 'chegando' : `${m} min`)).join(' · ');
 
-    const destHtml = destino ? `<span class="stop-arrival-dest">→ ${destino}</span>` : '';
+    const destHtml = destino ? `<span class="stop-arrival-dest"></span>` : '';
     const titleAttr = cfg && cfg.name ? ` title="${cfg.name}"` : '';
 
     return `<div class="stop-arrival-line">

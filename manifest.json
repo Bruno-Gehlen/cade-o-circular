@@ -2,7 +2,7 @@
   "name": "Cadê o circular - USP",
   "short_name": "Cadê o circular",
   "description": "Monitoramento em tempo real dos circulares da USP Butantã",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "lang": "pt-BR",
   "categories": [
     "transportation",
