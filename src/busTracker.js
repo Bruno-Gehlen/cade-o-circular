@@ -194,7 +194,10 @@ export default class BusTracker {
     container.innerHTML = '';
 
     this.busLines.forEach(line => {
-      const lineItem = document.createElement('div');
+      // <label> como raiz: clique/toque em qualquer ponto do item alterna o
+      // checkbox nativamente (mouse, toque e teclado), sem risco de alternar
+      // duas vezes e sem handler de clique extra.
+      const lineItem = document.createElement('label');
       lineItem.className = 'bus-line-item';
       lineItem.innerHTML = renderBusLineItemHtml(line);
       container.appendChild(lineItem);

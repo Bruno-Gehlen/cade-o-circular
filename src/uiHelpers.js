@@ -87,9 +87,7 @@ export function busPopupHtml(lineConfig, lineCode, bus, sentidoInfo = '') {
 
 export function renderBusLineItemHtml(line) {
   return `
-        <label class="bus-line-checkbox">
-          <input type="checkbox" data-line="${line.code}">
-        </label>
+        <input type="checkbox" class="bus-line-checkbox" data-line="${line.code}">
         <div class="bus-line-info">
           <div class="bus-line-code">${line.code}</div>
           <div class="bus-line-name">${line.name}</div>
