@@ -1,0 +1,43 @@
+# Render Blueprint: deploy web service + worker
+# Para usar: Dashboard → Blueprints → New Blueprint Instance → selecione este repo
+#
+# IMPORTANTE:
+# - O worker PRECISA estar em uma região/IP que a SPTrans não tenha banido.
+# - Se o worker na mesma região do web service for bloqueado, crie-o manualmente
+#   em outra região (ex.: web em Oregon, worker em Frankfurt) ou use um VPS externo.
+
+services:
+  - type: web
+    name: cade-o-circular
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: WORKER_URL
+        value: https://cade-o-circular-worker.onrender.com
+      - key: WORKER_API_KEY
+        generateValue: true
+      - key: SPTRANS_API_KEY
+        sync: false
+
+  - type: web
+    name: cade-o-circular-worker
+    runtime: node
+    region: virginia
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run start:worker
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: WORKER_API_KEY
+        fromService:
+          type: web
+          name: cade-o-circular
+          envVarKey: WORKER_API_KEY
+      - key: SPTRANS_API_KEY
+        sync: false
