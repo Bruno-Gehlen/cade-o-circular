@@ -1,13 +1,31 @@
-# Render Blueprint: deploy apenas o worker.
-# O web service "cade-o-circular" ja existe no seu projeto, entao
-# basta adicionar as env vars WORKER_URL e WORKER_API_KEY nele manualmente.
+# Render Blueprint: projeto completo "circular" com web service + worker.
+# Ao criar a Blueprint Instance, escolha o nome do projeto "circular".
+# O blueprint cria:
+#   - cade-o-circular        (web service, servindo o frontend e /api/*)
+#   - cade-o-circular-worker (worker que fala com a SPTrans)
 #
 # IMPORTANTE:
 # - O worker PRECISA estar em uma regiao/IP que a SPTrans nao tenha banido.
-# - Se a regiao abaixo for bloqueada, recrie o worker em outra regiao
-#   (singapore, ohio, virginia) ou use um VPS externo.
+# - Se Frankfurt for bloqueada, mude a regiao do worker para singapore ou ohio.
+# - Apos o deploy, aponte o dominio customizado cade-o-circular.com para o
+#   web service "cade-o-circular" no dashboard da Render.
 
 services:
+  - type: web
+    name: cade-o-circular
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: WORKER_URL
+        value: https://cade-o-circular-worker.onrender.com
+      - key: WORKER_API_KEY
+        generateValue: true
+
   - type: web
     name: cade-o-circular-worker
     runtime: node
@@ -21,4 +39,7 @@ services:
       - key: SPTRANS_API_KEY
         sync: false
       - key: WORKER_API_KEY
-        generateValue: true
+        fromService:
+          type: web
+          name: cade-o-circular
+          envVarKey: WORKER_API_KEY
