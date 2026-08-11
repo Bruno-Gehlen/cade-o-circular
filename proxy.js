@@ -51,11 +51,49 @@ let authCookies = '';
 // requisições chegam ao mesmo tempo com a sessão ainda não estabelecida.
 let authPromise = null;
 
+// Circuit breaker para autenticação. Se a SPTrans/Cloudflare bloquear o IP,
+// evitamos criar um "retry storm" onde cada requisição de usuário dispara
+// uma nova tentativa de login. Isso protege o próximo IP de ser banido.
+let authFailureCount = 0;
+let lastAuthFailureAt = 0;
+const AUTH_BACKOFF_INITIAL_MS = 30000;  // 30s
+const AUTH_BACKOFF_MAX_MS = 5 * 60 * 1000; // 5min
+
+function getAuthBackoffMs() {
+  return Math.min(AUTH_BACKOFF_INITIAL_MS * Math.pow(2, authFailureCount), AUTH_BACKOFF_MAX_MS);
+}
+
+function isInAuthBackoff() {
+  if (authFailureCount === 0) return false;
+  return Date.now() - lastAuthFailureAt < getAuthBackoffMs();
+}
+
+function recordAuthSuccess() {
+  authFailureCount = 0;
+  lastAuthFailureAt = 0;
+}
+
+function recordAuthFailure() {
+  authFailureCount++;
+  lastAuthFailureAt = Date.now();
+}
+
+function looksLikeCloudflareIpBan(body) {
+  return typeof body === 'string' && body.includes('"error_code":1006') && body.includes('ip_banned');
+}
+
 async function doAuthenticate() {
   if (!process.env.SPTRANS_API_KEY) {
     console.error('❌ SPTRANS_API_KEY não definida.');
     console.error('   → Crie um arquivo .env na raiz do projeto com: SPTRANS_API_KEY=<seu-token>');
     console.error('   → Use o .env.example como referência.');
+    isAuthenticated = false;
+    return false;
+  }
+
+  if (isInAuthBackoff()) {
+    const waitSec = Math.ceil((lastAuthFailureAt + getAuthBackoffMs() - Date.now()) / 1000);
+    console.warn(`⏳ Autenticação SPTrans em backoff. Próxima tentativa em ${waitSec}s.`);
     isAuthenticated = false;
     return false;
   }
@@ -81,16 +119,21 @@ async function doAuthenticate() {
     if (response.ok && body === 'true' && cookie) {
       authCookies = cookie;
       isAuthenticated = true;
+      recordAuthSuccess();
       console.log('✅ Autenticado na API SPTrans');
       return true;
     }
 
     console.error(`❌ Falha na autenticação SPTrans (HTTP ${response.status} ${response.statusText})`);
     console.error(`   → Corpo da resposta: ${body.slice(0, 500)}`);
-    if (response.ok && body === 'false') {
+    if (looksLikeCloudflareIpBan(body)) {
+      console.error('   → Cloudflare Error 1006: o IP deste servidor foi banido pela SPTrans.');
+      console.error('   → Solução: mude o IP de saída do servidor (ou use outro host/proxy) e reveja o token.');
+    } else if (response.ok && body === 'false') {
       console.error('   → A API recusou o token. Verifique se SPTRANS_API_KEY no .env está correta (sem aspas ou espaços extras).');
     }
     isAuthenticated = false;
+    recordAuthFailure();
     return false;
   } catch (error) {
     console.error('❌ Erro na autenticação:', error.message);
@@ -135,11 +178,18 @@ async function fetchWithAuth(url, options = {}) {
 // Middleware para garantir autenticação
 async function ensureAuthenticated(req, res, next) {
   if (!isAuthenticated) {
+    if (isInAuthBackoff()) {
+      const waitSec = Math.ceil((lastAuthFailureAt + getAuthBackoffMs() - Date.now()) / 1000);
+      return res.status(503).json({
+        error: 'Serviço temporariamente indisponível',
+        details: `Autenticação com SPTrans em cooldown devido a falhas recentes (tentativa em ${waitSec}s)`
+      });
+    }
     const success = await authenticate();
     if (!success) {
       return res.status(503).json({
         error: 'Falha na autenticação com API SPTrans',
-        details: 'Verifique se o token está correto no arquivo .env'
+        details: 'Verifique se o token está correto no arquivo .env ou se o IP do servidor não está bloqueado'
       });
     }
   }
@@ -448,6 +498,11 @@ app.get('/', (req, res) => {
 
 // Re-autenticação periódica para manter a sessão aquecida
 setInterval(async () => {
+  if (isInAuthBackoff()) {
+    const waitSec = Math.ceil((lastAuthFailureAt + getAuthBackoffMs() - Date.now()) / 1000);
+    console.log(`🔄 Re-autenticação automática adiada (backoff ativo, tentativa em ${waitSec}s)`);
+    return;
+  }
   console.log('🔄 Re-autenticando automaticamente...');
   isAuthenticated = false;
   await authenticate();
