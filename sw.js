@@ -39,7 +39,22 @@ async function precache() {
   const cacheName = await getCacheName();
   console.log(`Service Worker: precache em ${cacheName} (${PRECACHE_URLS.length} recursos)`);
   const cache = await caches.open(cacheName);
-  await cache.addAll(PRECACHE_URLS);
+
+  // Cache individualmente para nao armazenar respostas de erro (404/503).
+  // cache.addAll() cacheia qualquer status HTTP, inclusive falhas.
+  await Promise.all(PRECACHE_URLS.map(async (url) => {
+    try {
+      const response = await fetch(url, { cache: 'no-store' });
+      if (response.ok) {
+        await cache.put(url, response);
+      } else {
+        console.warn(`Service Worker: ignorando ${url} (HTTP ${response.status})`);
+      }
+    } catch (err) {
+      console.warn(`Service Worker: falha ao precachear ${url}:`, err.message);
+    }
+  }));
+
   return cacheName;
 }
 
