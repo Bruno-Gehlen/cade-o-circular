@@ -24,6 +24,18 @@ const LINE_CODES = ['8012', '8022', '8082', '8083', '8084', '8085', '8086', '177
 // 1 chamada upstream /Posicao por janela de cache (~6/min no total).
 const POSITIONS_TTL_MS = 10000;
 
+// A API Olho Vivo fica atrás de proteção Cloudflare. Requisições com
+// User-Agent muito genérico (ex.: node-fetch) ou sem cabeçalhos de navegador
+// podem ser bloqueadas com HTTP 403 + página HTML. Usamos um conjunto mínimo
+// de cabeçalhos compatível com navegadores reais.
+const SPTRANS_COMMON_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Referer': 'https://api.olhovivo.sptrans.com.br/'
+};
+
 // O frontend é servido por este mesmo servidor (mesma origem), portanto
 // não é necessário habilitar CORS.
 app.use(express.json());
@@ -54,6 +66,7 @@ async function doAuthenticate() {
     const response = await fetch(`${SPTRANS_BASE_URL}/Login/Autenticar?token=${process.env.SPTRANS_API_KEY}`, {
       method: 'POST',
       headers: {
+        ...SPTRANS_COMMON_HEADERS,
         'Content-Type': 'application/json',
         // O Cloudflare na frente da API Olho Vivo responde 411 (Length Required)
         // para POST sem Content-Length — sem este header a autenticação sempre falha
@@ -72,7 +85,8 @@ async function doAuthenticate() {
       return true;
     }
 
-    console.error(`❌ Falha na autenticação SPTrans (HTTP ${response.status}, resposta: ${body.slice(0, 200)})`);
+    console.error(`❌ Falha na autenticação SPTrans (HTTP ${response.status} ${response.statusText})`);
+    console.error(`   → Corpo da resposta: ${body.slice(0, 500)}`);
     if (response.ok && body === 'false') {
       console.error('   → A API recusou o token. Verifique se SPTRANS_API_KEY no .env está correta (sem aspas ou espaços extras).');
     }
@@ -97,7 +111,11 @@ function authenticate() {
 async function fetchWithAuth(url, options = {}) {
   const withCookies = (opts) => ({
     ...opts,
-    headers: { ...(opts.headers || {}), 'Cookie': authCookies }
+    headers: {
+      ...SPTRANS_COMMON_HEADERS,
+      ...(opts.headers || {}),
+      'Cookie': authCookies
+    }
   });
 
   let response = await fetch(url, withCookies(options));
