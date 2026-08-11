@@ -7,6 +7,8 @@
 # IMPORTANTE:
 # - O worker PRECISA estar em uma regiao/IP que a SPTrans nao tenha banido.
 # - Se Frankfurt for bloqueada, mude a regiao do worker para singapore ou ohio.
+# - Apos o deploy, preencha WORKER_URL no web service com a URL real do worker
+#   (o Render pode adicionar um sufixo como -gs36 se o nome estiver ocupado).
 # - Apos o deploy, aponte o dominio customizado cade-o-circular.com para o
 #   web service "cade-o-circular" no dashboard da Render.
 
@@ -22,7 +24,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: WORKER_URL
-        value: https://cade-o-circular-worker.onrender.com
+        sync: false
       - key: WORKER_API_KEY
         generateValue: true
 
