@@ -31,7 +31,7 @@ services:
   - type: web
     name: cade-o-circular-worker
     runtime: node
-    region: virginia
+    region: singapore
     plan: free
     buildCommand: npm install
     startCommand: npm run start:worker
