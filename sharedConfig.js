@@ -23,5 +23,5 @@ export const SPTRANS_COMMON_HEADERS = {
   'Referer': 'https://api.olhovivo.sptrans.com.br/'
 };
 
-// Intervalo entre re-autenticações periódicas (15 min)
-export const REAUTH_INTERVAL_MS = 15 * 60 * 1000;
+// Intervalo entre re-autenticações periódicas (30 min)
+export const REAUTH_INTERVAL_MS = 30 * 60 * 1000;
