@@ -27,6 +27,7 @@ const PRECACHE_URLS = [
   '/src/main.js',
   '/src/busTracker.js',
   '/src/mapManager.js',
+  '/src/mapConfig.js',
   '/src/utils.js',
   '/src/uiHelpers.js',
   '/src/presetLines.js',     

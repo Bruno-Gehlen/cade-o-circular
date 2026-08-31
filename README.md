@@ -11,7 +11,7 @@ Sistema web para monitoramento em tempo real das **principais linhas de ônibus*
 ## ✨ Funcionalidades Principais
 
 - 🚌 **Rastreamento em Tempo Real** - Posições atualizadas a cada 10 segundos
-- 🗺️ **Mapa Interativo** - Interface intuitiva com Leaflet.js
+- 🗺️ **Mapa Interativo** - Mapa vetorial com MapLibre GL JS (MapTiler/OpenMapTiles)
 - 📍 **Geolocalização** - Encontre sua posição atual
 - 🎨 **Temas Claro/Escuro** - Interface adaptável
 - 📱 **Responsivo** - Funciona perfeitamente em dispositivos móveis
@@ -31,7 +31,8 @@ Sistema web para monitoramento em tempo real das **principais linhas de ônibus*
 |------------|--------|-----|
 | **Node.js** | 18+ | Runtime JavaScript |
 | **Express.js** | ^4.18 | Servidor web minimalista |
-| **Leaflet.js** | ^1.9 | Mapa interativo |
+| **MapLibre GL JS** | ^5.24 | Mapa vetorial interativo |
+| **MapTiler / OpenMapTiles** | — | Tiles vetoriais (provedor) |
 | **SPTrans API** | v2.1 | Dados em tempo real |
 | **Vanilla JS** | ES6+ | Frontend sem frameworks |
 

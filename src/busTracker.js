@@ -524,9 +524,9 @@ export default class BusTracker {
     const popup = this._openStopPopup;
     if (!popup || this._openStopId !== stopId) return;
 
-    // Reconstrói o conteúdo do popup com a previsão embutida e usa setContent:
-    // é a string de conteúdo do popup que o Leaflet re-renderiza em cada
-    // update(); escrever direto no .stop-arrivals do DOM seria revertido.
+    // Reconstrói o conteúdo do popup com a previsão embutida e usa setContent
+    // (setHTML do MapLibre): o conteúdo é definido a partir dessa string, então
+    // escrever direto no .stop-arrivals do DOM seria revertido no próximo update.
     const writeArrivals = (arrivalsHtml) => {
       if (this._openStopPopup !== popup || this._openStopId !== stopId) return;
       const stop = stopCoords[stopId];

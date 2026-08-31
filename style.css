@@ -143,14 +143,9 @@
 
 }
 
-/* Mapa escuro: o filtro é aplicado APENAS aos tiles (ruas/áreas).
-   Marcadores, rotas e popups ficam fora do filtro e mantêm suas cores
-   verdadeiras no tema escuro.
-   (equivalente combinado dos filtros antigos empilhados:
-   invert(100%) hue-rotate(10+180deg) contrast(0.8*0.9) brightness(0.95)) */
-[data-color-scheme="dark"] .leaflet-tile-pane {
-  filter: invert(100%) hue-rotate(190deg) contrast(72%) brightness(95%);
-}
+/* Mapa escuro: com tiles VETORIAIS o tema escuro é um estilo próprio (dark),
+   trocado pelo MapManager quando data-color-scheme muda — não há mais filtro de
+   inversão sobre os tiles. Marcadores, rotas e popups mantêm suas cores. */
 
 /* Dark mode colors */
 @media (prefers-color-scheme: dark) {
@@ -420,8 +415,8 @@ pre code {
 .stop-marker-inner { display: inline-block; }
 .stop-marker-popup { display: none; }
 
-/* Leaflet will use marker.bindPopup content; ensure small popups look ok */
-.leaflet-popup-content .stop-marker-popup { display: block; }
+/* MapLibre usa o popup do marcador; garante que popups pequenos fiquem ok */
+.maplibregl-popup-content .stop-marker-popup { display: block; }
 
 
 .btn:focus-visible {
@@ -1434,57 +1429,67 @@ body {
     }
 }
 
-/* Custom Leaflet styles */
-.leaflet-div-icon {
+/* Estilos do mapa (MapLibre GL JS) */
+/* Nó-raiz do marcador do MapLibre (o divIcon do Leaflet): sem fundo/borda —
+   a gota e os pontos trazem o próprio visual. cursor default; a gota do ônibus
+   define cursor:pointer no hover. */
+.maplibregl-marker,
+.ml-marker {
     background: transparent;
     border: none;
     box-shadow: none;
+    cursor: default;
 }
 
-.leaflet-control-container {
-    display: none;;
+/* Atribuição compacta: discreta no canto inferior direito, em ambos os temas. */
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+  border-radius: var(--radius-sm, 6px);
 }
 
-/* Dark mode specific adjustments */
-[data-color-scheme="dark"] .leaflet-control-zoom a {
-    background-color: var(--color-charcoal-800) !important;
-    color: var(--color-gray-200) !important;
-}
-
-/* Controles do mapa no tema escuro (sem filtros de cor) */
-[data-color-scheme="dark"] .leaflet-control-attribution {
-  background: rgba(31, 33, 33, 0.8);
+[data-color-scheme="dark"] .maplibregl-ctrl-attrib {
+  background: rgba(31, 33, 33, 0.75) !important;
   color: var(--color-gray-300);
 }
 
-[data-color-scheme="dark"] .leaflet-control-attribution a {
+[data-color-scheme="dark"] .maplibregl-ctrl-attrib a {
   color: var(--color-teal-300);
 }
 
-[data-color-scheme="dark"] .leaflet-control-zoom a:hover {
-    background-color: var(--color-secondary) !important;
+[data-color-scheme="dark"] .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
 }
 
-/* Light mode specific adjustments */
-[data-color-scheme="light"] .leaflet-control-zoom a {
-    background-color: var(--color-cream-100) !important;
-    color: var(--color-slate-900) !important;
-}
+/* Rotas (camadas de linha) e marcadores mantêm as cores verdadeiras em ambos os
+   temas — o basemap escuro é um estilo vetorial próprio, sem filtro de inversão. */
 
-/* Rotas (polylines) mantêm as cores verdadeiras em ambos os temas —
-   o filtro hue-rotate que compensava a inversão do #map foi removido. */
-
-/* Popups no tema escuro (antes eram escurecidos pelo filtro do #map) */
-[data-color-scheme="dark"] .leaflet-popup-content-wrapper {
+/* Popups no tema escuro */
+[data-color-scheme="dark"] .maplibregl-popup-content {
   background: var(--color-charcoal-800);
   color: var(--color-gray-200);
 }
 
-[data-color-scheme="dark"] .leaflet-popup-tip {
-  background: var(--color-charcoal-800);
+[data-color-scheme="dark"] .maplibregl-popup-anchor-top .maplibregl-popup-tip,
+[data-color-scheme="dark"] .maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+[data-color-scheme="dark"] .maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: var(--color-charcoal-800);
 }
 
-[data-color-scheme="dark"] .leaflet-popup-close-button {
+[data-color-scheme="dark"] .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+[data-color-scheme="dark"] .maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+[data-color-scheme="dark"] .maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: var(--color-charcoal-800);
+}
+
+[data-color-scheme="dark"] .maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--color-charcoal-800);
+}
+
+[data-color-scheme="dark"] .maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--color-charcoal-800);
+}
+
+[data-color-scheme="dark"] .maplibregl-popup-close-button {
   color: var(--color-gray-300) !important;
 }
 
