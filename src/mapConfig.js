@@ -40,3 +40,36 @@ export const MAP_DEFAULTS = {
   center: [-23.561, -46.733], // [lat, lng]
   zoom: 15,
 };
+
+// "Um pouco de cor" no tema escuro: estilos escuros como o CARTO dark-matter são
+// quase monocromáticos. Recolorimos água e áreas verdes logo após o estilo
+// carregar, para o mapa ganhar vida sem ficar berrante. Defina como null para
+// desligar, ou ajuste as cores. Só se aplica ao tema escuro.
+export const DARK_COLOR_TWEAKS = {
+  water: '#1c3a5e', // azul de água (rio Pinheiros, represas) sobre o mapa escuro
+  green: '#23402c', // verde de parques/vegetação (campus da USP, praças)
+};
+
+// Monta a lista de ajustes de cor a aplicar, casando pelas source-layers do
+// esquema OpenMapTiles (funciona em qualquer provedor OpenMapTiles: dark-matter,
+// MapTiler, OpenFreeMap…). Função pura — recebe as camadas do estilo e devolve
+// { id, prop, value } para o chamador aplicar com setPaintProperty.
+export function colorTweaksForLayers(layers, palette) {
+  const out = [];
+  if (!palette || !Array.isArray(layers)) return out;
+  const isWaterFill = (sl) => sl === 'water' || sl === 'ocean';
+  const isWaterLine = (sl) => sl === 'waterway';
+  // Verde só em áreas comprovadamente verdes: a source-layer `park`, ou
+  // landcover/landuse cujo id indique vegetação (evita pintar todo o solo).
+  const greenId = /(park|wood|forest|grass|green|golf|garden|scrub|meadow|nature|vegetation|cemeter|pitch|recreation)/i;
+  for (const layer of layers) {
+    if (!layer || !layer.id) continue;
+    const sl = layer['source-layer'];
+    const id = layer.id;
+    if (layer.type === 'fill' && isWaterFill(sl)) out.push({ id, prop: 'fill-color', value: palette.water });
+    else if (layer.type === 'line' && isWaterLine(sl)) out.push({ id, prop: 'line-color', value: palette.water });
+    else if (layer.type === 'fill' && (sl === 'park' || ((sl === 'landcover' || sl === 'landuse') && greenId.test(id))))
+      out.push({ id, prop: 'fill-color', value: palette.green });
+  }
+  return out;
+}

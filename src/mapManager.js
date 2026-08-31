@@ -1,4 +1,4 @@
-import { MAP_STYLES } from './mapConfig.js';
+import { MAP_STYLES, DARK_COLOR_TWEAKS, colorTweaksForLayers } from './mapConfig.js';
 
 // Camada de abstração do mapa, agora sobre o MapLibre GL JS (tiles vetoriais).
 //
@@ -207,9 +207,10 @@ export default class MapManager {
 
     // As rotas (camadas GeoJSON) são apagadas a cada troca de estilo (tema);
     // re-adiciona todas quando um novo estilo termina de carregar. Também cobre
-    // o primeiro carregamento.
-    this.map.on('style.load', () => this._readdPolylines());
-    this.map.once('load', () => this._readdPolylines());
+    // o primeiro carregamento. O realce de cor (água/verde) é reaplicado junto,
+    // pois também é perdido na troca de estilo.
+    this.map.on('style.load', () => this._onStyleReady());
+    this.map.once('load', () => this._onStyleReady());
 
     // Troca o estilo do mapa quando o tema (data-color-scheme no <body>) muda —
     // assim o BusTracker não precisa saber nada sobre o provedor de tiles.
@@ -245,9 +246,26 @@ export default class MapManager {
     this.map.setStyle(url);
   }
 
+  _onStyleReady() {
+    this._applyColorTweaks();
+    this._readdPolylines();
+  }
+
   _readdPolylines() {
     for (const poly of this.polylines.values()) {
       poly.addToMap();
+    }
+  }
+
+  // "Um pouco de cor" no tema escuro: recolore água e áreas verdes do basemap.
+  // Casado por source-layer do OpenMapTiles (ver colorTweaksForLayers), então é
+  // agnóstico de provedor e degrada em silêncio se uma camada não existir.
+  _applyColorTweaks() {
+    if (this._theme !== 'dark' || !DARK_COLOR_TWEAKS || !this.map) return;
+    let layers;
+    try { layers = this.map.getStyle().layers; } catch (e) { return; }
+    for (const t of colorTweaksForLayers(layers, DARK_COLOR_TWEAKS)) {
+      try { this.map.setPaintProperty(t.id, t.prop, t.value); } catch (e) {}
     }
   }
 
