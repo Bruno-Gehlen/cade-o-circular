@@ -116,9 +116,9 @@ export function stopPopupHtml(stop, stopId, pinned = false, lineCode = '', arriv
   const name = (stop && stop.name) ? stop.name : '';
   // O conteúdo de .stop-arrivals é injetado pelo BusTracker (previsão de chegada
   // das linhas selecionadas que atendem esta parada). Ele faz parte da string de
-  // conteúdo do popup — e não de um innerHTML avulso — porque o popup.update() do
-  // Leaflet re-renderiza a partir dessa string; escrever direto no DOM seria
-  // sobrescrito na próxima atualização.
+  // conteúdo do popup — e não de um innerHTML avulso — porque o setHTML do popup
+  // (MapLibre) redefine o conteúdo a partir dessa string; escrever direto no DOM
+  // seria sobrescrito na próxima atualização.
   return `<div class="stop-popup">
     <strong>${name}</strong><br>
     <small>ID: ${stopId}</small>
