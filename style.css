@@ -1463,6 +1463,14 @@ body {
 /* Rotas (camadas de linha) e marcadores mantêm as cores verdadeiras em ambos os
    temas — o basemap escuro é um estilo vetorial próprio, sem filtro de inversão. */
 
+/* O popup fica ACIMA de todos os marcadores (paradas 590, ônibus 600, usuário
+   700): o .maplibregl-popup é irmão do container dos marcadores e, sem z-index,
+   ficava atrás deles. Como todo o mapa vive dentro de .map-container (um stacking
+   context com z-index 1), este valor alto continua ABAIXO dos painéis da UI. */
+.maplibregl-popup {
+  z-index: 900;
+}
+
 /* Popups no tema escuro */
 [data-color-scheme="dark"] .maplibregl-popup-content {
   background: var(--color-charcoal-800);
