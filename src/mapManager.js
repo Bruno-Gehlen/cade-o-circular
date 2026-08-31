@@ -124,7 +124,13 @@ class PolylineHandle {
   // Idempotente: se a fonte já existe, não faz nada.
   addToMap() {
     const map = this._manager.map;
-    if (!map || !map.isStyleLoaded()) return; // será (re)adicionada no evento style.load
+    // Usa a flag _styleReady (ligada no primeiro style.load) em vez de
+    // isStyleLoaded(): esta última fica FALSA por instantes logo após adicionar
+    // uma fonte, o que fazia a 2ª rota de uma linha (ida+volta), adicionada em
+    // sequência, ser descartada — só um sentido aparecia. Depois que o estilo
+    // carregou, addSource/addLayer funcionam mesmo com outra fonte ainda
+    // processando; antes disso, a rota é (re)adicionada em _onStyleReady.
+    if (!map || !this._manager._styleReady) return;
     if (map.getSource(this.sourceId)) return;
     try {
       map.addSource(this.sourceId, { type: 'geojson', data: this._geojson() });
@@ -176,6 +182,10 @@ export default class MapManager {
 
     this._theme = 'dark';
     this._styleUrls = MAP_STYLES;
+    // Vira true no primeiro style.load e volta a false durante uma troca de
+    // estilo (tema). Enquanto false, as rotas ficam pendentes e são
+    // materializadas em _onStyleReady quando o estilo termina de carregar.
+    this._styleReady = false;
   }
 
   init(containerId, center = [0, 0], zoom = 13) {
@@ -243,10 +253,14 @@ export default class MapManager {
     if (!this.map) return;
     // setStyle apaga as fontes/camadas próprias (rotas); os marcadores (nós DOM)
     // sobrevivem. As rotas voltam no handler de style.load com a cor já atual.
+    // Marca o estilo como "não pronto" até o próximo style.load para que rotas
+    // adicionadas nesse meio-tempo fiquem pendentes em vez de se perderem.
+    this._styleReady = false;
     this.map.setStyle(url);
   }
 
   _onStyleReady() {
+    this._styleReady = true;
     this._applyColorTweaks();
     this._readdPolylines();
   }
